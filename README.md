@@ -6,7 +6,7 @@
 
 **▶ [線上玩：shanchiehchiu.github.io/cell-lab](https://shanchiehchiu.github.io/cell-lab/)**
 
-![反應擴散](og.png)
+![Cell Lab 展示：反應擴散、蘭頓螞蟻、囚犯困境、森林大火、謝林隔離](docs/demo.gif)
 
 ## 八個模型
 
