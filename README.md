@@ -4,6 +4,8 @@
 
 單一 HTML 檔、零相依、不需要建置，開啟 `index.html` 就能玩，也可以當螢幕保護程式放著看。
 
+**▶ [線上玩：shanchiehchiu.github.io/cell-lab](https://shanchiehchiu.github.io/cell-lab/)**
+
 ![反應擴散](og.png)
 
 ## 八個模型
