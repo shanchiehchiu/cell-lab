@@ -1,0 +1,974 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>細胞實驗室 Cell Lab</title>
+<meta name="description" content="八個「每個個體只看鄰居」的互動模擬：生命遊戲、謝林隔離、傳染病、囚犯困境、糖景、反應擴散、森林大火、蘭頓螞蟻。簡單規則，長出複雜世界。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="細胞實驗室 Cell Lab">
+<meta property="og:description" content="八個互動模擬：隔離、疫情、貧富差距、斑馬紋、森林大火⋯⋯簡單規則長出複雜世界。可當螢幕保護程式。">
+<!-- 部署後請把下面的 og.png 換成完整網址（例如 https://帳號.github.io/專案名/og.png），社群平台才抓得到預覽圖 -->
+<meta property="og:image" content="og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#05070d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E🧫%3C/text%3E%3C/svg%3E">
+<style>
+  html,body{margin:0;height:100%;background:#05070d;overflow:hidden;font-family:system-ui,sans-serif}
+  canvas{display:block;cursor:crosshair}
+  #panel{position:fixed;right:12px;top:44px;width:236px;background:rgba(10,15,30,.92);border:1px solid rgba(120,160,255,.35);border-radius:10px;color:#cde;font-size:13px;user-select:none;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+  #ph{padding:9px 12px;cursor:pointer;font-weight:600;color:#9bf;display:flex;justify-content:space-between}
+  #pb{padding:2px 12px 12px;display:flex;flex-direction:column;gap:9px}
+  #pb[hidden]{display:none}
+  #panel .row{display:flex;gap:6px;flex-wrap:wrap}
+  #panel button{flex:1;background:#16213d;color:#cde;border:1px solid #2c3d6b;border-radius:6px;padding:6px 4px;font:inherit;cursor:pointer;white-space:nowrap}
+  #panel button:hover{background:#1f2f57}
+  #panel button.on{background:#fd6;color:#221;border-color:#fd6}
+  #panel label{display:flex;flex-direction:column;gap:3px}
+  #panel label b{float:right;color:#9bf;font-weight:500}
+  #panel .chk{flex-direction:row;align-items:center;gap:5px;flex:1}
+  #panel input[type=range]{width:100%;accent-color:#6af}
+  #panel .cap{color:#789;font-size:12px;margin-top:2px;line-height:1.5}
+  body.clean #panel, body.clean #hud, body.clean #gen{display:none}
+  body.clean canvas{cursor:none}
+  #panel .grp{display:flex;flex-direction:column;gap:9px}
+  #panel .grp[hidden]{display:none}
+  #panel select{background:#16213d;color:#cde;border:1px solid #2c3d6b;border-radius:6px;padding:6px;font:inherit}
+  #hud{position:fixed;left:0;right:0;bottom:0;padding:8px 16px;background:rgba(5,7,13,.92);border-top:1px solid rgba(120,160,255,.25);color:#8af;font-size:13px;user-select:none;pointer-events:none;line-height:1.6}
+  #gen{position:fixed;right:0;top:0;padding:6px 16px;background:rgba(5,7,13,.92);border-bottom-left-radius:8px;color:#8af;font:13px ui-monospace,monospace;pointer-events:none}
+  canvas{touch-action:none}   /* 手機上在畫面拖曳不要捲動頁面 */
+  #intro{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;background:rgba(5,7,13,.72);backdrop-filter:blur(6px);padding:16px}
+  #intro[hidden]{display:none}
+  #intro .card{max-width:440px;background:#0b1224;border:1px solid rgba(120,160,255,.35);border-radius:14px;padding:22px 24px;color:#cde;line-height:1.7;box-shadow:0 12px 40px rgba(0,0,0,.6)}
+  #intro h1{margin:0 0 8px;font-size:22px;color:#fff}
+  #intro p{margin:6px 0;font-size:14px}
+  #intro .btns{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  #intro button{flex:1;min-width:150px;padding:11px 12px;border-radius:8px;border:1px solid #2c3d6b;background:#16213d;color:#cde;font:inherit;font-size:15px;cursor:pointer}
+  #intro button.main{background:#3a6bff;border-color:#3a6bff;color:#fff}
+  #intro small{display:block;margin-top:12px;color:#789;font-size:12px;line-height:1.6}
+  @media (max-width:700px){   /* 手機：面板改放底部並預設收合，隱藏鍵盤提示列 */
+    #hud{display:none}
+    #panel{left:8px;right:8px;top:auto;bottom:8px;width:auto;max-height:60vh;overflow-y:auto}
+    #gen{font-size:11px;padding:4px 10px;max-width:70vw;text-align:right;line-height:1.4}
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="gen"></div>
+<div id="panel">
+  <div id="ph"><span>⚙ 控制面板</span><span id="pt">▾</span></div>
+  <div id="pb">
+    <label>模型 <select id="mSel"></select></label>
+    <div class="row"><button id="bPause"></button><button id="bStep">單步</button></div>
+    <label>速度 <b id="vSpeed"></b><input type="range" id="sSpeed" min="2" max="120"></label>
+    <div class="row"><label class="chk"><input type="checkbox" id="cAuto">自動輪播</label><button id="bClean">隱藏介面 (U)</button></div>
+    <label>輪播間隔 <b id="vAuto"></b><input type="range" id="sAuto" min="10" max="120" value="30"></label>
+    <div class="row"><label class="chk"><input type="checkbox" id="cAlt">右鍵動作（手機用）</label><button id="bHelp">說明</button></div>
+    <div id="lifeCtl" class="grp">
+      <div class="row"><button id="bRand">隨機</button><button id="bClear">清空</button><button id="bExp">碰撞實驗</button></div>
+      <label>隨機密度 <b id="vDens"></b><input type="range" id="sDens" min="5" max="50"></label>
+      <label>泡泡頻率 <b id="vChat"></b><input type="range" id="sChat" min="1" max="10"></label>
+      <div class="row"><label class="chk"><input type="checkbox" id="cRadar">雷達框</label><label class="chk"><input type="checkbox" id="cChat">泡泡</label><label class="chk"><input type="checkbox" id="cGuide">圖鑑</label></div>
+      <div class="cap">放置圖案（選了之後點畫面）</div>
+      <div class="row"><button id="bGun">滑翔機槍</button><button id="bGlider">滑翔機</button></div>
+    </div>
+    <div id="modelCtl" class="grp" hidden>
+      <div id="params" class="grp"></div>
+      <div class="row"><button id="bReset">重新開始</button></div>
+      <div class="cap" id="mNote"></div>
+    </div>
+  </div>
+</div>
+<div id="hud">拖曳：畫細胞（右鍵拖曳：擦除） ｜ 空白鍵：暫停/繼續 ｜ R：隨機 ｜ C：清空 ｜ G：選滑翔機槍 ｜ L：選滑翔機（選了會出現預覽，點擊放下） ｜ 建議先按 C 清空 ｜ X：碰撞實驗 ｜ T：對話泡泡 ｜ D：雷達框（綠=不動 黃=閃爍 紅=會飛） ｜ ↑↓：調速度 ｜ U：隱藏介面 ｜ A：自動輪播</div>
+<div id="intro"><div class="card">
+  <h1>🧫 細胞實驗室</h1>
+  <p>八個「每個個體只看鄰居」的小世界：生命遊戲、謝林隔離、傳染病、囚犯困境、糖景、反應擴散、森林大火、蘭頓螞蟻。</p>
+  <p>規則都只有幾行，卻會自己長出隔離、疫情、貧富差距、斑馬紋，以及混沌中的秩序。</p>
+  <div class="btns"><button class="main" id="iAuto">▶ 自動播放</button><button id="iPlay">🎮 自己玩</button></div>
+  <small>桌機快捷鍵：空白鍵暫停、U 隱藏介面、A 自動輪播。手機請用面板操作；需要「右鍵動作」（擦除、種樹…）時，勾選面板上的「右鍵動作」。</small>
+</div></div>
+<script>
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const CELL = 8;
+let cols, rows, grid, next, age, gen = 0, paused = false, speed = 30;   // speed = 每秒世代數
+
+function init(){
+  cv.width = innerWidth; cv.height = innerHeight;
+  cols = Math.floor(cv.width / CELL); rows = Math.floor(cv.height / CELL);
+  grid = new Uint8Array(cols*rows); next = new Uint8Array(cols*rows); age = new Uint16Array(cols*rows);
+  resetModel();
+}
+let rw = innerWidth, rh = innerHeight;
+addEventListener('resize', () => {   // 手機網址列伸縮只會讓高度小幅變動，不必重置模擬
+  if (innerWidth !== rw || Math.abs(innerHeight - rh) > 120){ rw = innerWidth; rh = innerHeight; init(); }
+});
+
+function randomize(){
+  for (let i = 0; i < grid.length; i++){ grid[i] = Math.random() < density ? 1 : 0; age[i] = 0; }
+  gen = 0;
+}
+
+// 計算下一代：上下左右相連（環面），用取餘數處理邊界
+function step(){
+  for (let y = 0; y < rows; y++){
+    const up = ((y-1+rows)%rows)*cols, mid = y*cols, dn = ((y+1)%rows)*cols;
+    for (let x = 0; x < cols; x++){
+      const l = (x-1+cols)%cols, r = (x+1)%cols;
+      const n = grid[up+l]+grid[up+x]+grid[up+r]+grid[mid+l]+grid[mid+r]+grid[dn+l]+grid[dn+x]+grid[dn+r];
+      const i = mid + x, alive = grid[i];
+      const nv = alive ? (n === 2 || n === 3) : (n === 3);   // 生命遊戲規則 B3/S23
+      next[i] = nv ? 1 : 0;
+      age[i] = nv ? (alive ? Math.min(age[i]+1, 200) : 1) : 0;
+    }
+  }
+  [grid, next] = [next, grid];
+  gen++;
+}
+
+function draw(){
+  if (model !== 'life') return drawModelView();   // 其他模型走自己的繪圖
+  ctx.fillStyle = '#05070d'; ctx.fillRect(0, 0, cv.width, cv.height);
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++){
+    const i = y*cols + x;
+    if (!grid[i]) continue;
+    const a = age[i];
+    // 新生：白亮 → 年輕：青 → 老：紫紅，一眼看出哪些是穩定結構
+    ctx.fillStyle = `hsl(${Math.max(170, 320 - a*2.5)} 90% ${a < 3 ? 85 : 55}%)`;
+    ctx.fillRect(x*CELL+1, y*CELL+1, CELL-2, CELL-2);
+  }
+  if (radar) drawRadar();
+  if (showGuide && !clean) drawGuide();
+  if (chat) drawBubbles(performance.now());
+  drawBanner(performance.now());
+  if (brush){   // 預覽：黃色半透明 + 外框 + 名稱
+    const b = BRUSHES[brush];
+    ctx.fillStyle = 'rgba(255,220,80,.85)';
+    for (const [dx, dy] of b.cells) ctx.fillRect((mx+dx)*CELL+1, (my+dy)*CELL+1, CELL-2, CELL-2);
+    const w = Math.max(...b.cells.map(c => c[0])) + 1, h = Math.max(...b.cells.map(c => c[1])) + 1;
+    ctx.strokeStyle = 'rgba(255,220,80,.6)'; ctx.setLineDash([4, 4]);
+    ctx.strokeRect(mx*CELL-3, my*CELL-3, w*CELL+6, h*CELL+6); ctx.setLineDash([]);
+    ctx.fillStyle = '#fd6'; ctx.font = '14px system-ui';
+    ctx.fillText(`${b.name}（點擊放下，Esc 取消）`, mx*CELL, my*CELL - 10);
+  }
+  document.getElementById('gen').textContent =
+    `第 ${gen} 代 ｜ ${speed} 代/秒 ${paused ? '｜ 暫停中' : ''}` +
+    (radar ? ` ｜ 不動 ${counts.still} ・ 閃爍 ${counts.osc} ・ 會飛 ${counts.ship}` : '');
+}
+
+// ---- 圖案 ----
+const GLIDER = [[1,0],[2,1],[0,2],[1,2],[2,2]];
+const GUN = `........................O...........
+......................O.O...........
+............OO......OO............OO
+...........O...O....OO............OO
+OO........O.....O...OO..............
+OO........O...O.OO....O.O...........
+..........O.....O.......O...........
+...........O...O....................
+............OO......................`.split('\n');
+function stamp(cells, ox, oy){
+  for (const [dx, dy] of cells){
+    const x = ((ox+dx)%cols+cols)%cols, y = ((oy+dy)%rows+rows)%rows;
+    grid[y*cols+x] = 1; age[y*cols+x] = 1;
+  }
+}
+function gunCells(){
+  const c = [];
+  GUN.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === 'O') c.push([x, y]); }));
+  return c;
+}
+
+// ---- 圖鑑：左上角列出常見圖案的樣子，方便對照畫面上的東西 ----
+let showGuide = true;
+const GUIDE = [
+  { name: '方塊', tip: '完全不動', cells: [[0,0],[1,0],[0,1],[1,1]] },
+  { name: '蜂巢', tip: '完全不動', cells: [[1,0],[2,0],[0,1],[3,1],[1,2],[2,2]] },
+  { name: '閃燈', tip: '橫、直來回閃', cells: [[0,0],[1,0],[2,0]] },
+  { name: '滑翔機', tip: '斜著一直飛走', cells: GLIDER },
+];
+function drawGuide(){
+  const S = 7, rowH = 34, pw = 200, ph = GUIDE.length*rowH + 34;
+  ctx.fillStyle = 'rgba(10,15,30,.85)'; ctx.fillRect(12, 12, pw, ph);
+  ctx.strokeStyle = 'rgba(120,160,255,.4)'; ctx.strokeRect(12.5, 12.5, pw, ph);
+  ctx.fillStyle = '#9bf'; ctx.font = 'bold 13px system-ui'; ctx.fillText('圖鑑（H 隱藏）', 22, 32);
+  GUIDE.forEach((g, i) => {
+    const y = 44 + i*rowH;
+    ctx.fillStyle = '#fff';
+    for (const [dx, dy] of g.cells) ctx.fillRect(24 + dx*S, y + 4 + dy*S, S-1, S-1);
+    ctx.fillStyle = '#cde'; ctx.font = '13px system-ui'; ctx.fillText(g.name, 68, y + 12);
+    ctx.fillStyle = '#89a'; ctx.font = '12px system-ui'; ctx.fillText(g.tip, 68, y + 27);
+  });
+}
+
+// ---- 雷達：自動辨識圖案並畫上外框 ----
+let radar = true, marks = [], counts = { still: 0, osc: 0, ship: 0 };
+const KIND_COLOR = { still: '#4f8', osc: '#fd4', ship: '#f65' };
+const PATTERNS = [
+  { name: '方塊', kind: 'still', cells: [[0,0],[1,0],[0,1],[1,1]] },
+  { name: '蜂巢', kind: 'still', cells: [[1,0],[2,0],[0,1],[3,1],[1,2],[2,2]] },
+  { name: '麵包', kind: 'still', cells: [[1,0],[2,0],[0,1],[3,1],[1,2],[3,2],[2,3]] },
+  { name: '小船', kind: 'still', cells: [[0,0],[1,0],[0,1],[2,1],[1,2]] },
+  { name: '浴缸', kind: 'still', cells: [[1,0],[0,1],[2,1],[1,2]] },
+  { name: '池塘', kind: 'still', cells: [[1,0],[2,0],[0,1],[3,1],[0,2],[3,2],[1,3],[2,3]] },
+  { name: '閃燈', kind: 'osc', cells: [[0,0],[1,0],[2,0]] },
+  { name: '蟾蜍', kind: 'osc', cells: [[1,0],[2,0],[3,0],[0,1],[1,1],[2,1]] },
+  { name: '蟾蜍', kind: 'osc', cells: [[2,0],[0,1],[3,1],[0,2],[3,2],[1,3]] },
+  { name: '信標', kind: 'osc', cells: [[0,0],[1,0],[0,1],[1,1],[2,2],[3,2],[2,3],[3,3]] },
+  { name: '信標', kind: 'osc', cells: [[0,0],[1,0],[0,1],[3,2],[2,3],[3,3]] },
+  { name: '滑翔機', kind: 'ship', cells: [[1,0],[2,1],[0,2],[1,2],[2,2]] },
+  { name: '滑翔機', kind: 'ship', cells: [[0,0],[2,0],[1,1],[2,1],[1,2]] },
+];
+function normSig(cells){   // 平移到原點、排序，變成可比對的字串
+  const mx = Math.min(...cells.map(c => c[0])), my = Math.min(...cells.map(c => c[1]));
+  return cells.map(([x, y]) => [x-mx, y-my]).sort((a, b) => a[1]-b[1] || a[0]-b[0]).map(c => c.join(',')).join(';');
+}
+const SIGS = new Map();   // 每個圖案的 8 種旋轉/鏡像都登記，不管朝哪個方向都認得出
+for (const p of PATTERNS){
+  let cs = p.cells;
+  for (let f = 0; f < 2; f++){
+    for (let r = 0; r < 4; r++){ SIGS.set(normSig(cs), p); cs = cs.map(([x, y]) => [-y, x]); }
+    cs = cs.map(([x, y]) => [-x, y]);
+  }
+}
+function components(idxs, radius){   // 把距離 ≤ radius 的細胞歸成同一群
+  const set = new Set(idxs), seen = new Set(), out = [];
+  for (const s of idxs){
+    if (seen.has(s)) continue;
+    const comp = [], stack = [s]; seen.add(s);
+    while (stack.length){
+      const i = stack.pop(); comp.push(i);
+      const x = i % cols, y = (i / cols) | 0;
+      for (let dy = -radius; dy <= radius; dy++) for (let dx = -radius; dx <= radius; dx++){
+        const nx = x+dx, ny = y+dy;
+        if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue;
+        const j = ny*cols + nx;
+        if (set.has(j) && !seen.has(j)){ seen.add(j); stack.push(j); }
+      }
+    }
+    out.push(comp);
+  }
+  return out;
+}
+function detect(){
+  const alive = [];
+  for (let i = 0; i < grid.length; i++) if (grid[i]) alive.push(i);
+  const found = [], rest = [];
+  counts = { still: 0, osc: 0, ship: 0 };
+  const tryMatch = comp => {
+    if (comp.length > 12) return false;
+    const cells = comp.map(i => [i % cols, (i / cols) | 0]);
+    const p = SIGS.get(normSig(cells));
+    if (!p) return false;
+    const xs = cells.map(c => c[0]), ys = cells.map(c => c[1]);
+    found.push({ p, x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs) + 1, h: Math.max(...ys) - Math.min(...ys) + 1 });
+    counts[p.kind]++;
+    return true;
+  };
+  for (const comp of components(alive, 1)) if (!tryMatch(comp)) rest.push(...comp);
+  for (const comp of components(rest, 2)) tryMatch(comp);   // 第二輪：相隔 1 格的分離結構（如信標）
+  return found;
+}
+function drawRadar(){
+  ctx.font = '11px system-ui'; ctx.lineWidth = 1.5;
+  for (const m of marks){
+    const c = KIND_COLOR[m.p.kind], pad = 4, L = 6;
+    const x = m.x*CELL - pad, y = m.y*CELL - pad, w = m.w*CELL + pad*2, h = m.h*CELL + pad*2;
+    ctx.strokeStyle = c; ctx.beginPath();   // 四角括弧，像瞄準框
+    for (const [cx, cy, sx, sy] of [[x, y, 1, 1], [x+w, y, -1, 1], [x, y+h, 1, -1], [x+w, y+h, -1, -1]]){
+      ctx.moveTo(cx + sx*L, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + sy*L);
+    }
+    ctx.stroke();
+    ctx.fillStyle = c; ctx.fillText(m.p.name, x, y > 14 ? y - 3 : y + h + 12);
+  }
+}
+
+// ---- 碰撞實驗：清空畫面，擺好幾個注定相撞的圖案（真實的規則結果） ----
+const rot180 = cs => cs.map(([x, y]) => [2-x, 2-y]);   // 滑翔機預設往右下飛；轉 180° 變成往左上
+const flipX  = cs => cs.map(([x, y]) => [2-x, y]);     // 水平鏡像：往左下
+const rnd = n => Math.floor(Math.random()*(2*n+1)) - n; // -n ~ n 的隨機偏移，讓每次撞法不同
+const BLOCK = [[0,0],[1,0],[0,1],[1,1]], BLINKER = [[0,0],[1,0],[2,0]], HIVE = [[1,0],[2,0],[0,1],[3,1],[1,2],[2,2]];
+const EXPERIMENTS = [
+  { name: '滑翔機 × 滑翔機（正面對撞）', run(cx, cy){ stamp(GLIDER, cx-15, cy-15+rnd(3)); stamp(rot180(GLIDER), cx+13, cy+13+rnd(3)); } },
+  { name: '滑翔機 × 方塊', run(cx, cy){ stamp(BLOCK, cx, cy); stamp(GLIDER, cx-14, cy-14+rnd(2)); } },
+  { name: '滑翔機 × 閃燈', run(cx, cy){ stamp(BLINKER, cx, cy); stamp(GLIDER, cx-14, cy-14+rnd(2)); } },
+  { name: '滑翔機 × 蜂巢', run(cx, cy){ stamp(HIVE, cx, cy); stamp(GLIDER, cx-14, cy-14+rnd(2)); } },
+  { name: '三隻滑翔機會師', run(cx, cy){
+      stamp(GLIDER, cx-15, cy-15+rnd(2)); stamp(flipX(GLIDER), cx+13, cy-15+rnd(2)); stamp(rot180(GLIDER), cx+13, cy+13+rnd(2)); } },
+];
+let banner = null;
+function runExperiment(){
+  if (model !== 'life') return;
+  const e = EXPERIMENTS[Math.floor(Math.random()*EXPERIMENTS.length)];
+  grid.fill(0); age.fill(0); gen = 0; paused = false; brush = null; speed = 12;   // 放慢，看得清楚
+  e.run(cols >> 1, rows >> 1);
+  banner = { text: `碰撞實驗：${e.name}`, until: performance.now() + 3500 };
+}
+function drawBanner(now){
+  if (!banner || now > banner.until) return;
+  ctx.globalAlpha = Math.min(1, (banner.until - now)/500);
+  ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center';
+  const w = ctx.measureText(banner.text).width + 32;
+  ctx.fillStyle = 'rgba(10,15,30,.9)'; ctx.fillRect(cv.width/2 - w/2, 16, w, 36);
+  ctx.fillStyle = '#fd6'; ctx.fillText(banner.text, cv.width/2, 40);
+  ctx.textAlign = 'left'; ctx.globalAlpha = 1;
+}
+
+// ---- 對話泡泡：編的台詞，不代表細胞真的在溝通 ----
+let chat = true, bubbles = [], lastSpeak = 0;
+const LINES = {
+  '方塊': ['我不動', '穩如泰山', '別推我', '2×2 最強'],
+  '蜂巢': ['嗡嗡嗡～', '我家很甜', '六邊形之光'],
+  '麵包': ['剛出爐', '有人要吐司嗎'],
+  '小船': ['出航！', '我沒在動啦'],
+  '浴缸': ['泡澡中', '水好燙'],
+  '池塘': ['呱', '中間沒有魚'],
+  '閃燈': ['閃閃閃', '我好暈', '眨眼中', '開燈關燈'],
+  '蟾蜍': ['呱呱', '跳一下'],
+  '信標': ['嗶——', '有人嗎？'],
+  '滑翔機': ['借過！', '別擋路', '我要飛去哪', '小心！'],
+};
+const SHIP_DANGER = ['要撞了！！', '啊啊啊！', '煞車！！'];   // 飛行者旁邊有東西
+const NEAR_DANGER = ['有東西衝過來！', '救命啊', '我什麼都沒做'];   // 被衝撞的一方
+function speak(now){
+  if (!marks.length) return;
+  const c = m => [m.x + m.w/2, m.y + m.h/2];
+  const cand = [];
+  for (const m of marks){
+    const [cx, cy] = c(m);
+    if (bubbles.some(b => Math.hypot(b.cx - cx, b.cy - cy) < 5)) continue;   // 已經在說話就跳過
+    let danger = false;
+    for (const o of marks){   // 有滑翔機在 9 格內 → 氣氛緊張
+      if (o === m || (m.p.kind !== 'ship' && o.p.kind !== 'ship')) continue;
+      const [ox, oy] = c(o);
+      if (Math.hypot(ox - cx, oy - cy) < 9){ danger = true; break; }
+    }
+    cand.push({ m, cx, cy, danger });
+  }
+  if (!cand.length) return;
+  const hot = cand.filter(x => x.danger);
+  const pool = hot.length && Math.random() < 0.8 ? hot : cand;   // 有危險的優先開口
+  const t = pool[Math.floor(Math.random()*pool.length)];
+  const lines = t.danger ? (t.m.p.kind === 'ship' ? SHIP_DANGER : NEAR_DANGER) : (LINES[t.m.p.name] || ['…']);
+  bubbles.push({ name: t.m.p.name, cx: t.cx, cy: t.cy, text: lines[Math.floor(Math.random()*lines.length)], born: now, until: now + 3200 });
+  if (bubbles.length > 24) bubbles.shift();
+}
+function drawBubbles(now){
+  bubbles = bubbles.filter(b => b.until > now);
+  ctx.font = '13px system-ui';
+  for (const b of bubbles){
+    let best = null, bd = 25;   // 泡泡跟著最近的同名圖案（滑翔機會移動）
+    for (const m of marks){
+      if (m.p.name !== b.name) continue;
+      const d = (m.x + m.w/2 - b.cx)**2 + (m.y + m.h/2 - b.cy)**2;
+      if (d < bd){ bd = d; best = m; }
+    }
+    if (!best){ b.until = 0; continue; }
+    b.cx = best.x + best.w/2; b.cy = best.y + best.h/2;
+    const bw = ctx.measureText(b.text).width + 16, bh = 24;
+    const bx = Math.min(Math.max(b.cx*CELL - bw/2, 4), cv.width - bw - 4);
+    let by = best.y*CELL - bh - 14, below = false;
+    if (by < 4){ by = (best.y + best.h)*CELL + 14; below = true; }
+    const tx = Math.min(Math.max(b.cx*CELL, bx + 10), bx + bw - 10), ty = below ? by : by + bh;
+    ctx.globalAlpha = Math.min(1, (b.until - now)/400);
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 8); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(tx-5, ty); ctx.lineTo(tx+5, ty); ctx.lineTo(tx, ty + (below ? -7 : 7)); ctx.fill();   // 小尾巴
+    ctx.fillStyle = '#123'; ctx.fillText(b.text, bx + 8, by + 16);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ---- 滑鼠 / 鍵盤 ----
+let painting = 0, mx = 0, my = 0;   // painting: 0 無、1 畫、2 擦
+function paintAt(e){
+  const x = Math.floor(e.clientX/CELL), y = Math.floor(e.clientY/CELL);
+  mx = x; my = y;
+  if (!painting) return;
+  if (model !== 'life'){ const M = MODELS[model]; if (M.paint) M.paint(x, y, painting); return; }
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++){   // 3×3 的筆刷
+    const xx = (x+dx+cols)%cols, yy = (y+dy+rows)%rows, i = yy*cols+xx;
+    grid[i] = painting === 1 ? 1 : 0; age[i] = painting === 1 ? 1 : 0;
+  }
+}
+cv.addEventListener('contextmenu', e => e.preventDefault());
+let brush = null;   // 'gun' | 'glider' | null（null = 一般畫筆）
+const BRUSHES = { gun: { name: '滑翔機槍', cells: gunCells() }, glider: { name: '滑翔機', cells: GLIDER } };
+cv.addEventListener('pointerdown', e => {
+  if (brush && model === 'life' && e.button === 0){
+    mx = Math.floor(e.clientX/CELL); my = Math.floor(e.clientY/CELL);
+    const cells = BRUSHES[brush].cells;
+    const w = Math.max(...cells.map(c => c[0])) + 3, h = Math.max(...cells.map(c => c[1])) + 3;
+    for (let dy = -1; dy < h; dy++) for (let dx = -1; dx < w; dx++){   // 先清空底下的區塊
+      const i = (((my+dy)%rows+rows)%rows)*cols + (((mx+dx)%cols+cols)%cols);
+      grid[i] = 0; age[i] = 0;
+    }
+    stamp(cells, mx, my); brush = null; return;
+  }
+  painting = (e.button === 2 || altMode) ? 2 : 1; paintAt(e);   // altMode：觸控裝置沒有右鍵，用面板開關代替
+});
+addEventListener('pointerup', () => painting = 0);
+addEventListener('pointermove', paintAt);
+addEventListener('keydown', e => {
+  if (e.code === 'Space'){ paused = !paused; e.preventDefault(); }
+  else if (e.code === 'KeyR') resetModel();
+  else if (e.code === 'KeyC'){ grid.fill(0); age.fill(0); gen = 0; }
+  else if (e.code === 'KeyG') brush = 'gun';
+  else if (e.code === 'KeyL') brush = 'glider';
+  else if (e.code === 'Escape'){ brush = null; setClean(false); }
+  else if (e.code === 'KeyH') showGuide = !showGuide;
+  else if (e.code === 'KeyD'){ radar = !radar; marks = []; }
+  else if (e.code === 'KeyX') runExperiment();
+  else if (e.code === 'KeyT'){ chat = !chat; bubbles = []; }
+  else if (e.code === 'KeyU') setClean(!clean);
+  else if (e.code === 'KeyA') setAuto(!auto);
+  else if (e.code === 'ArrowUp'){ speed = Math.min(120, speed + 5); e.preventDefault(); }
+  else if (e.code === 'ArrowDown'){ speed = Math.max(2, speed - 5); e.preventDefault(); }
+});
+
+// 用累積時間決定每幀要跑幾代，這樣速度不受螢幕更新率影響
+let last = performance.now(), acc = 0, lastDetect = 0;
+function frame(t){
+  acc += t - last; last = t;
+  const interval = 1000 / speed;
+  let guard = 0;
+  while (acc >= interval && guard++ < 10){ if (!paused) stepModel(); acc -= interval; }
+  if (auto && t - autoT > autoSec*1000){ autoNext(); autoT = t; }   // 螢幕保護程式：定時換模型
+  if (model === 'life' && (radar || chat) && t - lastDetect > 60){ marks = detect(); lastDetect = t; }   // 每 60ms 掃描一次
+  if (model === 'life' && chat && t - lastSpeak > speakInterval){ speak(t); lastSpeak = t; }                       // 每 0.2 秒有人開口
+  if (acc > interval) acc = 0;
+  draw(); syncUI();
+  requestAnimationFrame(frame);
+}
+// ================= 社會模型：共用同一塊格子畫布 =================
+// 三個模型都是「每個人只看 8 個鄰居」，整體現象是自己湧現出來的。
+// grid：0=空 / 1、2、3=各種狀態；age：各模型自己的計時器或標記；NB：預先算好的鄰居表（環面）
+let model = 'life', moved, score, NB, history = [];
+const V = {};   // 所有滑桿目前的值，用 key 取
+const DIR8 = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+function buildNb(){
+  const N = cols*rows;
+  NB = new Int32Array(N*8); moved = new Uint8Array(N); score = new Float32Array(N);
+  for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++)
+    for (let d = 0; d < 8; d++)
+      NB[(y*cols + x)*8 + d] = ((y + DIR8[d][1] + rows) % rows)*cols + (x + DIR8[d][0] + cols) % cols;
+}
+const shuffle = a => { for (let i = a.length-1; i > 0; i--){ const j = Math.random()*(i+1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+function block3(x, y, fn){   // 對 (x,y) 周圍 3×3 的每一格執行 fn(索引)
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++)
+    fn(((y+dy+rows) % rows)*cols + (x+dx+cols) % cols);
+}
+
+const MODELS = {
+  life: { name: '生命遊戲', speed: 30, params: [] },
+
+  // 謝林隔離：同類鄰居比例 < 容忍度 → 搬去隨機空地
+  schelling: {
+    name: '謝林隔離模型', speed: 10,
+    note: '紅、藍兩種居民，只要「同色鄰居比例」低於容忍度就搬家（閃白光的是剛搬家的人）。把容忍度拉到 30～40%：沒有人想隔離，卻自己分成一塊一塊。隔離指數 50% ≈ 完全混居。',
+    hud: '謝林隔離模型 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度 ｜ 用面板調容忍度，看隔離指數怎麼變',
+    params: [
+      { k: 'tol', label: '容忍度（至少幾成同色鄰居才滿意）', min: 0, max: 100, val: 35, fmt: v => v + '%' },
+      { k: 'empty', label: '空地比例', min: 2, max: 40, val: 12, fmt: v => v + '%', reset: true },
+    ],
+    info: '',
+    reset(){
+      for (let i = 0; i < grid.length; i++){ grid[i] = Math.random() < V.empty/100 ? 0 : (Math.random() < .5 ? 1 : 2); age[i] = 0; }
+      gen = 0; this.info = '';
+    },
+    step(){
+      const tol = V.tol/100, unhappy = [], empties = [];
+      let sum = 0, n = 0;
+      for (let i = 0; i < grid.length; i++){
+        if (age[i] > 0) age[i]--;
+        const s = grid[i];
+        if (!s){ empties.push(i); continue; }
+        let same = 0, tot = 0;
+        for (let d = 0; d < 8; d++){ const v = grid[NB[i*8+d]]; if (v){ tot++; if (v === s) same++; } }
+        if (tot){ sum += same/tot; n++; if (same/tot < tol) unhappy.push(i); }   // 沒有鄰居的人視為滿意
+      }
+      shuffle(unhappy);
+      for (const i of unhappy){
+        if (!empties.length) break;
+        const k = Math.random()*empties.length | 0, j = empties[k];
+        grid[j] = grid[i]; grid[i] = 0; age[j] = 4; empties[k] = i;   // 搬走後，原位置變成新的空地
+      }
+      this.info = `隔離指數 ${(n ? sum/n*100 : 0).toFixed(0)}% ｜ 不滿意 ${unhappy.length} 人`;
+      gen++;
+    },
+    color: (s, a) => a > 0 ? '#fff' : (s === 1 ? '#ff5a6e' : '#4da3ff'),
+    stats(){ return this.info; },
+  },
+
+  // 傳染病 SIR：健康(1) → 感染(2) → 康復(3)，居民會隨機走動
+  sir: {
+    name: '傳染病模擬 (SIR)', speed: 15, peak: 0, total: 1, cnt: { s: 0, i: 0, r: 0 },
+    note: '藍＝健康、紅＝感染、綠＝康復免疫。用滑鼠點畫面可以製造感染源。試試把「活動力」調低（封城）或拉高疫苗率，看左上角的感染曲線怎麼被壓平。',
+    hud: '傳染病模擬 ｜ 滑鼠點擊：製造感染源 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度',
+    params: [
+      { k: 'beta', label: '感染率（每個感染鄰居每步）', min: 1, max: 50, val: 8, fmt: v => v + '%' },
+      { k: 'recover', label: '康復所需步數', min: 5, max: 80, val: 20, fmt: v => v + ' 步' },
+      { k: 'mobility', label: '活動力（越低越像封城）', min: 0, max: 100, val: 60, fmt: v => v + '%' },
+      { k: 'dens', label: '居民密度', min: 10, max: 60, val: 30, fmt: v => v + '%', reset: true },
+      { k: 'vacc', label: '疫苗接種率', min: 0, max: 95, val: 0, fmt: v => v + '%', reset: true },
+    ],
+    reset(){
+      const S = [], dens = V.dens/100, vacc = V.vacc/100;
+      for (let i = 0; i < grid.length; i++){
+        age[i] = 0; grid[i] = 0;
+        if (Math.random() < dens){ if (Math.random() < vacc) grid[i] = 3; else { grid[i] = 1; S.push(i); } }
+      }
+      for (const i of shuffle(S).slice(0, 8)) grid[i] = 2;   // 一開始撒 8 個感染者
+      gen = 0; history = []; this.peak = 0; this.record();
+    },
+    record(){
+      let s = 0, i2 = 0, r = 0;
+      for (let i = 0; i < grid.length; i++){ const v = grid[i]; if (v === 1) s++; else if (v === 2) i2++; else if (v === 3) r++; }
+      this.cnt = { s, i: i2, r }; this.total = s + i2 + r; this.peak = Math.max(this.peak, i2);
+      history.push(this.cnt); if (history.length > 6000) history.shift();
+    },
+    step(){
+      const beta = V.beta/100, D = V.recover, mob = V.mobility/100;
+      moved.fill(0);
+      for (let i = 0; i < grid.length; i++){   // 1. 走動：隨機挑一個鄰格，是空的就搬過去
+        const s = grid[i];
+        if (!s || moved[i] || Math.random() >= mob) continue;
+        const j = NB[i*8 + (Math.random()*8 | 0)];
+        if (!grid[j]){ grid[j] = s; age[j] = age[i]; grid[i] = 0; age[i] = 0; moved[j] = 1; }
+      }
+      next.set(grid);   // 2. 感染與康復都寫進 next，避免同一步連鎖感染
+      for (let i = 0; i < grid.length; i++){
+        const s = grid[i];
+        if (s === 1){
+          let k = 0;
+          for (let d = 0; d < 8; d++) if (grid[NB[i*8+d]] === 2) k++;
+          if (k && Math.random() < 1 - Math.pow(1 - beta, k)){ next[i] = 2; age[i] = 0; }   // k 個感染鄰居，逃過的機率是 (1-β)^k
+        } else if (s === 2 && ++age[i] >= D) next[i] = 3;
+      }
+      [grid, next] = [next, grid];
+      gen++; this.record();
+    },
+    paint(x, y){ block3(x, y, i => { if (grid[i] === 1){ grid[i] = 2; age[i] = 0; } }); },
+    color: s => s === 1 ? '#4da3ff' : s === 2 ? '#ff4d5e' : '#4fe39a',
+    overlay(){   // 左上角：三條人口比例曲線
+      const H = history, w = 270, h = 110, x0 = 12, y0 = 12, tot = Math.max(1, this.total);
+      ctx.fillStyle = 'rgba(10,15,30,.85)'; ctx.fillRect(x0, y0, w, h + 26);
+      ctx.strokeStyle = 'rgba(120,160,255,.35)'; ctx.strokeRect(x0 + .5, y0 + .5, w, h + 26);
+      ctx.fillStyle = '#9bf'; ctx.font = 'bold 12px system-ui'; ctx.fillText('人口比例變化', x0 + 8, y0 + 16);
+      if (H.length < 2) return;
+      ctx.lineWidth = 2;
+      for (const [key, col] of [['s', '#4da3ff'], ['r', '#4fe39a'], ['i', '#ff4d5e']]){
+        ctx.strokeStyle = col; ctx.beginPath();
+        for (let px = 0; px < w - 16; px++){
+          const y = y0 + 24 + h - H[Math.round(px/(w-17)*(H.length-1))][key]/tot*h;
+          px ? ctx.lineTo(x0 + 8 + px, y) : ctx.moveTo(x0 + 8 + px, y);
+        }
+        ctx.stroke();
+      }
+      ctx.lineWidth = 1;
+    },
+    stats(){
+      const c = this.cnt;
+      return `健康 ${c.s} ・ 感染 ${c.i} ・ 康復 ${c.r} ・ 峰值 ${(this.peak/Math.max(1, this.total)*100).toFixed(0)}%` + (c.i === 0 ? ' ｜ 疫情結束' : '');
+    },
+  },
+
+  // 空間囚犯困境（Nowak & May）：合作者互相得 1 分，背叛者對合作者得 b 分，其他 0 分
+  pd: {
+    name: '囚犯困境（空間版）', speed: 8, coopPct: 100,
+    note: '藍＝合作、紅＝背叛，綠／黃＝剛轉換的格子。每格會模仿「自己和鄰居中得分最高的人」。「全員合作＋中央一個背叛者」時：b 低於約 1.8，背叛者無法擴散；高於 2.0，也只能小範圍存活；剛好在 1.8～2.0 之間，會炸出對稱的萬花筒圖案，最後合作者穩定在三成左右。',
+    hud: '囚犯困境 ｜ 左鍵：放背叛者，右鍵：放合作者 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度',
+    params: [
+      { k: 'b', label: '背叛的誘惑值 b', min: 100, max: 250, val: 185, fmt: v => (v/100).toFixed(2) },
+      { k: 'coop', label: '初始合作者比例（100% = 正中央一個背叛者）', min: 30, max: 100, val: 100, fmt: v => v + '%', reset: true },
+    ],
+    reset(){
+      const c = V.coop/100;
+      for (let i = 0; i < grid.length; i++){ grid[i] = Math.random() < c ? 1 : 2; age[i] = 0; }
+      if (V.coop === 100) grid[(rows >> 1)*cols + (cols >> 1)] = 2;   // 經典設定：全員合作 + 中央一個背叛者
+      gen = 0; this.coopPct = 100;
+    },
+    step(){
+      const b = V.b/100;
+      let coop = 0;
+      for (let i = 0; i < grid.length; i++){   // 1. 算每格的得分（含自己對自己：合作者 +1）
+        let cN = 0;
+        for (let d = 0; d < 8; d++) if (grid[NB[i*8+d]] === 1) cN++;
+        score[i] = grid[i] === 1 ? cN + 1 : b*cN;
+      }
+      for (let i = 0; i < grid.length; i++){   // 2. 模仿得分最高的鄰居
+        let best = score[i], bs = grid[i];
+        for (let d = 0; d < 8; d++){ const j = NB[i*8+d]; if (score[j] > best){ best = score[j]; bs = grid[j]; } }
+        next[i] = bs; age[i] = bs === grid[i] ? 0 : (bs === 1 ? 1 : 2);   // age：1=剛變合作、2=剛變背叛
+        if (bs === 1) coop++;
+      }
+      [grid, next] = [next, grid];
+      this.coopPct = coop/grid.length*100; gen++;
+    },
+    paint(x, y, btn){ block3(x, y, i => { grid[i] = btn === 2 ? 1 : 2; age[i] = 0; }); },
+    color: (s, a) => a === 1 ? '#4fe39a' : a === 2 ? '#ffd84d' : s === 1 ? '#4da3ff' : '#ff4d5e',
+    stats(){ return `合作者 ${this.coopPct.toFixed(1)}%`; },
+  },
+
+  // 糖景（Sugarscape）：居民在糖山上找糖，視野、代謝天生不同，貧富差距自己長出來
+  sugar: {
+    name: '糖景（貧富差距）', speed: 12, gini: 0, n: 0, richest: 0, avg: 1,
+    note: '黃色底＝糖（越亮越多），圓點＝居民，顏色代表財富（紅＝窮、青＝富）。每個人視野和代謝率天生隨機，沒人偷、沒人作弊，貧富差距（基尼係數）卻自己長出來。左鍵撒糖、右鍵挖糖。',
+    hud: '糖景 ｜ 左鍵：撒糖 ｜ 右鍵：挖掉糖 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度',
+    params: [
+      { k: 'pop', label: '居民人數', min: 100, max: 1500, val: 500, fmt: v => v + ' 人', reset: true },
+      { k: 'regrow', label: '糖再生速度（每步）', min: 1, max: 4, val: 1, fmt: v => v },
+      { k: 'visMax', label: '視野上限（天生差異）', min: 1, max: 10, val: 6, fmt: v => v + ' 格', reset: true },
+    ],
+    reset(){
+      const N = grid.length;
+      this.cap = new Uint8Array(N); this.sug = new Uint8Array(N);   // cap：糖的容量上限；sug：目前的糖
+      this.w = new Float32Array(N); this.vis = new Uint8Array(N); this.met = new Uint8Array(N);   // 居民的財富、視野、代謝（以格子索引存放）
+      const R = Math.min(cols, rows)*0.3, peaks = [[cols*.28, rows*.32], [cols*.72, rows*.68]];
+      for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++){
+        let lvl = 0;   // 兩座糖山：離山頂越近，容量越高（0～4）
+        for (const [px, py] of peaks) lvl = Math.max(lvl, 4 - Math.floor(Math.hypot(x-px, y-py)/(R/4.3)));
+        this.cap[y*cols + x] = this.sug[y*cols + x] = Math.max(0, lvl);
+      }
+      grid.fill(0); age.fill(0);
+      for (let n = 0; n < V.pop; n++) this.spawn();
+      gen = 0; this.calc();
+    },
+    spawn(){   // 在隨機空格生一個新居民
+      for (let t = 0; t < 200; t++){
+        const i = Math.random()*grid.length | 0;
+        if (!grid[i]){ grid[i] = 1; this.w[i] = 5 + Math.random()*20; this.vis[i] = 1 + (Math.random()*V.visMax | 0); this.met[i] = 1 + (Math.random()*4 | 0); return; }
+      }
+    },
+    calc(){   // 基尼係數：0 = 人人一樣多，越接近 1 越不平均
+      const ws = [];
+      for (let i = 0; i < grid.length; i++) if (grid[i]) ws.push(this.w[i]);
+      ws.sort((a, b) => a - b);
+      let sum = 0, cum = 0; const n = ws.length;
+      for (let k = 0; k < n; k++){ sum += ws[k]; cum += (k+1)*ws[k]; }
+      this.n = n; this.avg = n ? sum/n : 1; this.richest = n ? ws[n-1] : 0;
+      this.gini = sum > 0 ? 2*cum/(n*sum) - (n+1)/n : 0;
+    },
+    step(){
+      const order = [];
+      for (let i = 0; i < grid.length; i++) if (grid[i]) order.push(i);
+      shuffle(order);   // 每步隨機決定行動順序，避免固定的先後優勢
+      const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+      for (const i of order){
+        const x = i % cols, y = (i/cols) | 0, vis = this.vis[i];
+        let best = i, bs = this.sug[i];   // 留在原地也是選項
+        for (const [dx, dy] of shuffle(dirs.slice())) for (let k = 1; k <= vis; k++){   // 上下左右看 vis 格，找最甜的空位
+          const j = (((y + dy*k) % rows + rows) % rows)*cols + ((x + dx*k) % cols + cols) % cols;
+          if (!grid[j] && this.sug[j] > bs){ bs = this.sug[j]; best = j; }
+        }
+        if (best !== i){ grid[best] = 1; this.w[best] = this.w[i]; this.vis[best] = vis; this.met[best] = this.met[i]; grid[i] = 0; }
+        this.w[best] += this.sug[best] - this.met[best]; this.sug[best] = 0;   // 吃糖、扣代謝
+        if (this.w[best] < 0){ grid[best] = 0; this.spawn(); }                // 餓死，由新居民補上
+      }
+      for (let i = 0; i < grid.length; i++) if (this.sug[i] < this.cap[i]) this.sug[i] = Math.min(this.cap[i], this.sug[i] + V.regrow);
+      gen++; this.calc();
+    },
+    paint(x, y, btn){
+      for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++){
+        if (dx*dx + dy*dy > 10) continue;
+        const i = (((y+dy) % rows + rows) % rows)*cols + ((x+dx) % cols + cols) % cols;
+        this.cap[i] = btn === 2 ? 0 : 4; this.sug[i] = this.cap[i];
+      }
+    },
+    bg(){   // 糖的分布當背景
+      const P = ['', 'rgba(255,205,60,.13)', 'rgba(255,205,60,.26)', 'rgba(255,205,60,.4)', 'rgba(255,205,60,.56)'];
+      for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++){
+        const s = this.sug[y*cols + x];
+        if (s){ ctx.fillStyle = P[s]; ctx.fillRect(x*CELL, y*CELL, CELL, CELL); }
+      }
+    },
+    color(s, a, i){   // 財富 → 顏色：紅（窮）→ 青（富），以平均財富的 2.5 倍為滿分
+      const t = Math.min(1, this.w[i] / Math.max(1, this.avg*2.5));
+      return `hsl(${t*190} 90% 58%)`;
+    },
+    stats(){ return `人口 ${this.n} ｜ 貧富差距（基尼）${this.gini.toFixed(2)} ｜ 最富 ${this.richest.toFixed(0)}`; },
+  },
+
+  // 反應擴散（Gray-Scott）：兩種化學物質 U、V，V 會把 U 吃掉並複製自己，靠擴散速度差長出斑紋
+  rd: {
+    name: '反應擴散（斑紋）', speed: 20, cover: 0,
+    note: '兩種化學物質互相反應、擴散，會長出斑馬紋、珊瑚、細胞分裂般的圖案。滑鼠點畫面滴入「種子」。經典組合：餵食 0.0545／殺死 0.0620＝珊瑚，0.0367／0.0649＝細胞分裂，0.0290／0.0570＝迷宮。調一點點，圖案就完全不同。',
+    hud: '反應擴散 ｜ 滑鼠點擊／拖曳：滴入種子 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度',
+    params: [
+      { k: 'feed', label: '餵食速率 f', min: 200, max: 800, val: 545, fmt: v => (v/10000).toFixed(4) },
+      { k: 'kill', label: '殺死速率 k', min: 450, max: 700, val: 620, fmt: v => (v/10000).toFixed(4) },
+    ],
+    autoPick(){   // 輪播時只挑已知會長出漂亮圖案的組合
+      const P = [[545, 620], [367, 649], [290, 570], [300, 620]], p = P[Math.random()*P.length | 0];
+      V.feed = p[0]; V.kill = p[1];
+    },
+    reset(){
+      const N = grid.length;
+      this.U = new Float32Array(N).fill(1); this.W = new Float32Array(N); this.U2 = new Float32Array(N); this.W2 = new Float32Array(N);
+      for (let s = 0; s < 12; s++) this.paint(Math.random()*cols | 0, Math.random()*rows | 0);
+      gen = 0; this.cover = 0;
+    },
+    paint(x, y){   // 7×7 的種子：U 減半、V 設為 1。太弱的種子（例如 V=.25）會在擴散中被稀釋到消失
+      for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++){
+        const i = (((y+dy) % rows + rows) % rows)*cols + ((x+dx) % cols + cols) % cols;
+        this.U[i] = .5; this.W[i] = 1;
+      }
+    },
+    step(){
+      const f = V.feed/10000, k = V.kill/10000;
+      let U = this.U, W = this.W, U2 = this.U2, W2 = this.W2;
+      const n = U.length;
+      for (let it = 0; it < 12; it++){   // 每個「步」內部跑 12 次小迭代，圖案才長得夠快
+        for (let i = 0; i < n; i++){
+          const o = i*8, u = U[i], v = W[i];
+          // 拉普拉斯：上下左右權重 0.2、四個斜角 0.05、中心 -1
+          const lu = .2*(U[NB[o+1]] + U[NB[o+3]] + U[NB[o+4]] + U[NB[o+6]]) + .05*(U[NB[o]] + U[NB[o+2]] + U[NB[o+5]] + U[NB[o+7]]) - u;
+          const lv = .2*(W[NB[o+1]] + W[NB[o+3]] + W[NB[o+4]] + W[NB[o+6]]) + .05*(W[NB[o]] + W[NB[o+2]] + W[NB[o+5]] + W[NB[o+7]]) - v;
+          const uvv = u*v*v;   // 反應項：U 被 V 吃掉，同時長出更多 V
+          U2[i] = u + lu - uvv + f*(1 - u);
+          W2[i] = v + .5*lv + uvv - (f + k)*v;
+        }
+        [U, U2] = [U2, U]; [W, W2] = [W2, W];
+      }
+      this.U = U; this.W = W; this.U2 = U2; this.W2 = W2;
+      let c = 0; for (let i = 0; i < n; i++) if (W[i] > .15) c++;
+      this.cover = c/n*100; gen++;
+    },
+    draw(){   // 用格子解析度畫成一張圖，再放大並平滑，看起來像連續的紋路
+      if (!this.oc || this.oc.width !== cols || this.oc.height !== rows){
+        this.oc = document.createElement('canvas'); this.oc.width = cols; this.oc.height = rows;
+        this.octx = this.oc.getContext('2d'); this.img = this.octx.createImageData(cols, rows);
+      }
+      const d = this.img.data, W = this.W;
+      for (let i = 0; i < W.length; i++){
+        const t = Math.min(1, W[i]*3.2), p = i*4;   // 深藍 → 青 → 黃
+        d[p] = 5 + 250*t*t; d[p+1] = 7 + 230*Math.pow(t, 1.3); d[p+2] = 13 + 800*t*(1 - t); d[p+3] = 255;
+      }
+      this.octx.putImageData(this.img, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(this.oc, 0, 0, cols*CELL, rows*CELL);
+    },
+    stats(){ return `f ${(V.feed/10000).toFixed(4)} ・ k ${(V.kill/10000).toFixed(4)} ｜ 斑紋覆蓋 ${this.cover.toFixed(0)}%`; },
+  },
+
+  // 森林大火：樹木慢慢長、閃電隨機點火，火會沿著相鄰的樹蔓延，燒完留灰燼再變回空地
+  forest: {
+    name: '森林大火', speed: 15, cnt: { tree: 0, fire: 0 }, maxFire: 0,
+    note: '綠＝樹、亮橘＝火、暗紅＝灰燼。樹一直在長，閃電偶爾點火，火勢沿著相連的樹林蔓延。左鍵點畫面放火、右鍵種樹。試試把「閃電頻率」調低：樹會連成一大片，一旦著火就是災難；頻繁小火反而不會有大火。',
+    hud: '森林大火 ｜ 左鍵：放火 ｜ 右鍵：種樹 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度',
+    params: [
+      { k: 'grow', label: '樹木生長機率（每格每步）', min: 1, max: 40, val: 6, fmt: v => (v/10).toFixed(1) + '%' },
+      { k: 'spread', label: '火的蔓延機率', min: 10, max: 100, val: 70, fmt: v => v + '%' },
+      { k: 'lightning', label: '閃電頻率', min: 0, max: 100, val: 20, fmt: v => v },
+      { k: 'treeDens', label: '初始樹木密度', min: 10, max: 90, val: 55, fmt: v => v + '%', reset: true },
+    ],
+    reset(){
+      const trees = [];
+      for (let i = 0; i < grid.length; i++){
+        age[i] = 0; grid[i] = Math.random() < V.treeDens/100 ? 1 : 0;
+        if (grid[i]) trees.push(i);
+      }
+      for (const i of shuffle(trees).slice(0, 2)) grid[i] = 2;   // 一開始先燒兩處
+      gen = 0; this.maxFire = 0; this.count();
+    },
+    count(){
+      let t = 0, f = 0;
+      for (let i = 0; i < grid.length; i++){ if (grid[i] === 1) t++; else if (grid[i] === 2) f++; }
+      this.cnt = { tree: t, fire: f }; this.maxFire = Math.max(this.maxFire, f);
+    },
+    step(){
+      const grow = V.grow/1000, spread = V.spread/100, lit = V.lightning*1e-6;
+      next.set(grid);   // 全部寫進 next，避免火在同一步燒穿整片森林
+      for (let i = 0; i < grid.length; i++){
+        const s = grid[i];
+        if (s === 0){ if (Math.random() < grow) next[i] = 1; }
+        else if (s === 1){
+          const o = i*8; let k = 0;   // 只看上下左右四個鄰居有幾個在著火
+          if (grid[NB[o+1]] === 2) k++; if (grid[NB[o+3]] === 2) k++; if (grid[NB[o+4]] === 2) k++; if (grid[NB[o+6]] === 2) k++;
+          if ((k && Math.random() < 1 - Math.pow(1 - spread, k)) || Math.random() < lit){ next[i] = 2; age[i] = 0; }
+        }
+        else if (s === 2){ if (++age[i] >= 2){ next[i] = 3; age[i] = 0; } }   // 火燒兩步變灰燼
+        else if (++age[i] >= 10){ next[i] = 0; age[i] = 0; }                     // 灰燼十步後變回空地
+      }
+      [grid, next] = [next, grid];
+      gen++; this.count();
+    },
+    paint(x, y, btn){
+      block3(x, y, i => {
+        if (btn === 2){ if (grid[i] !== 2){ grid[i] = 1; age[i] = 0; } }
+        else if (grid[i] === 1){ grid[i] = 2; age[i] = 0; }
+      });
+    },
+    color: (s, a) => s === 1 ? '#2fbf6b' : s === 2 ? (a === 0 ? '#ffd84d' : '#ff6a2a') : `hsl(15 30% ${Math.max(8, 28 - a*2)}%)`,
+    stats(){ return `森林覆蓋 ${(this.cnt.tree/grid.length*100).toFixed(0)}% ｜ 燃燒中 ${this.cnt.fire} 格 ｜ 單步最大火勢 ${this.maxFire} 格`; },
+  },
+
+  // 蘭頓螞蟻：螞蟻依「腳下格子的顏色」決定轉向，再改色、前進。規則簡單，行為卻先混沌後突然變規律
+  ant: {
+    name: '蘭頓螞蟻', speed: 15, ants: [], moves: 0, rule: 'RL', lastPaint: 0,
+    note: '一隻螞蟻只有兩條規則：站在空格→右轉、塗色、前進；站在有色格→左轉、擦掉、前進。先亂走上萬步，然後突然開始蓋出一條斜向的「高速公路」（紅點是螞蟻）。換規則（RLR、LLRR…）或多放幾隻螞蟻，圖案完全不同。點畫面可以再放一隻。',
+    hud: '蘭頓螞蟻 ｜ 滑鼠點擊：再放一隻螞蟻 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度',
+    params: [
+      { k: 'rate', label: '每步走的格數', min: 1, max: 2000, val: 200, fmt: v => v },
+      { k: 'rule', label: '規則（R右轉、L左轉，依序對應顏色）', min: 0, max: 3, val: 0, fmt: v => RULES[v], reset: true },
+      { k: 'nAnts', label: '螞蟻數量', min: 1, max: 8, val: 1, fmt: v => v + ' 隻', reset: true },
+    ],
+    reset(){
+      grid.fill(0); age.fill(0); this.rule = RULES[V.rule]; this.ants = []; this.moves = 0; gen = 0;
+      for (let n = 0; n < V.nAnts; n++) this.addAnt((cols >> 1) + (n ? Math.random()*20 - 10 | 0 : 0), (rows >> 1) + (n ? Math.random()*20 - 10 | 0 : 0));
+    },
+    addAnt(x, y){ this.ants.push({ x: (x + cols) % cols, y: (y + rows) % rows, d: Math.random()*4 | 0 }); },
+    step(){
+      const rule = this.rule, n = rule.length, DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0];
+      for (let m = 0; m < V.rate; m++) for (const a of this.ants){
+        const i = a.y*cols + a.x, s = grid[i];
+        a.d = (a.d + (rule[s] === 'R' ? 1 : 3)) & 3;   // 依腳下顏色轉向
+        grid[i] = (s + 1) % n;                          // 換成下一個顏色
+        a.x = (a.x + DX[a.d] + cols) % cols; a.y = (a.y + DY[a.d] + rows) % rows;
+      }
+      this.moves += V.rate*this.ants.length; gen++;
+    },
+    paint(x, y){   // 拖曳時每 0.15 秒才放一隻，避免瞬間放出幾百隻
+      const now = performance.now();
+      if (now - this.lastPaint < 150 || this.ants.length >= 40) return;
+      this.lastPaint = now; this.addAnt(x, y);
+    },
+    color(s){ return `hsl(${170 + (s - 1)*300/Math.max(1, this.rule.length - 1)} 85% 58%)`; },
+    fg(){ ctx.fillStyle = '#ff4d5e'; for (const a of this.ants) ctx.fillRect(a.x*CELL - 1, a.y*CELL - 1, CELL + 2, CELL + 2); },
+    stats(){ return `已走 ${this.moves} 步 ｜ 規則 ${this.rule} ｜ ${this.ants.length} 隻`; },
+  },
+};
+const RULES = ['RL', 'RLR', 'LLRR', 'LRRRRRLLR'];
+for (const M of Object.values(MODELS)) for (const p of M.params) V[p.k] = p.val;
+
+function stepModel(){ if (model === 'life') step(); else MODELS[model].step(); }
+function resetModel(){
+  if (model === 'life') randomize();
+  else { buildNb(); MODELS[model].reset(); }
+}
+function drawModelView(){
+  const M = MODELS[model];
+  ctx.fillStyle = '#05070d'; ctx.fillRect(0, 0, cv.width, cv.height);
+  if (M.bg) M.bg();
+  if (M.draw) M.draw();   // 有自己繪圖方式的模型（如反應擴散）
+  else for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++){
+    const i = y*cols + x, s = grid[i];
+    if (!s) continue;
+    ctx.fillStyle = M.color(s, age[i], i);
+    ctx.fillRect(x*CELL + 1, y*CELL + 1, CELL - 2, CELL - 2);
+  }
+  if (M.fg) M.fg();
+  if (M.overlay && !clean) M.overlay();
+  drawBanner(performance.now());
+  document.getElementById('gen').textContent =
+    `${M.name} ｜ 第 ${gen} 步 ｜ ${speed} 步/秒${paused ? ' ｜ 暫停中' : ''} ｜ ${M.stats()}`;
+}
+
+// ---- 控制面板：按鈕/滑桿直接改上面的狀態變數，syncUI 再把鍵盤造成的變化同步回面板 ----
+const $ = id => document.getElementById(id);
+let density = 0.22, speakInterval = 200;
+$('bPause').onclick = () => paused = !paused;
+$('bStep').onclick = () => { paused = true; stepModel(); };   // 單步：暫停並只走一代
+$('bRand').onclick = randomize;
+$('bClear').onclick = () => { grid.fill(0); age.fill(0); gen = 0; };
+$('bExp').onclick = runExperiment;
+$('bGun').onclick = () => brush = brush === 'gun' ? null : 'gun';
+$('bGlider').onclick = () => brush = brush === 'glider' ? null : 'glider';
+$('sSpeed').oninput = e => speed = +e.target.value;
+$('sDens').oninput = e => density = e.target.value / 100;
+$('sChat').oninput = e => speakInterval = 1000 / e.target.value;
+$('cRadar').onchange = e => { radar = e.target.checked; marks = []; };
+$('cChat').onchange = e => { chat = e.target.checked; bubbles = []; };
+$('cGuide').onchange = e => showGuide = e.target.checked;
+$('ph').onclick = () => { const h = $('pb').hidden = !$('pb').hidden; $('pt').textContent = h ? '▸' : '▾'; };
+// 操作完就放掉焦點，不然之後按空白鍵/方向鍵會被面板元件吃掉
+$('panel').addEventListener('change', e => e.target.blur());
+$('panel').addEventListener('click', e => { if (e.target.tagName === 'BUTTON') e.target.blur(); });
+function setVal(el, v){ if (String(el.value) !== String(v)) el.value = v; }
+function syncUI(){
+  $('bPause').textContent = paused ? '▶ 繼續' : '⏸ 暫停';
+  setVal($('sSpeed'), speed); $('vSpeed').textContent = speed + ' 代/秒';
+  const d = Math.round(density * 100); setVal($('sDens'), d); $('vDens').textContent = d + '%';
+  const c = Math.round(1000 / speakInterval); setVal($('sChat'), c); $('vChat').textContent = c + ' 個/秒';
+  $('cRadar').checked = radar; $('cChat').checked = chat; $('cGuide').checked = showGuide;
+  $('bGun').classList.toggle('on', brush === 'gun'); $('bGlider').classList.toggle('on', brush === 'glider');
+  for (const p of MODELS[model].params) $('v_' + p.k).textContent = p.fmt(V[p.k]);
+  $('cAuto').checked = auto; $('vAuto').textContent = autoSec + ' 秒';
+}
+
+// ---- 模型選單：切換時重建該模型的滑桿、切換說明文字，並重新開始 ----
+const LIFE_HUD = $('hud').innerHTML;
+for (const [k, M] of Object.entries(MODELS)) $('mSel').add(new Option(M.name, k));
+function buildParams(){
+  const M = MODELS[model];
+  $('params').innerHTML = M.params.map(p =>
+    `<label>${p.label} <b id="v_${p.k}"></b><input type="range" id="s_${p.k}" min="${p.min}" max="${p.max}" value="${V[p.k]}"></label>`).join('');
+  for (const p of M.params){
+    $('s_' + p.k).oninput = e => { V[p.k] = +e.target.value; if (p.reset) resetModel(); };
+  }
+  $('mNote').textContent = M.note || '';
+}
+function setModel(m){
+  model = m; brush = null; bubbles = []; marks = []; banner = null; paused = false;
+  speed = MODELS[m].speed;
+  $('lifeCtl').hidden = m !== 'life'; $('modelCtl').hidden = m === 'life';
+  $('hud').innerHTML = m === 'life' ? LIFE_HUD : MODELS[m].hud + ' ｜ U：隱藏介面 ｜ A：自動輪播';
+  document.title = MODELS[m].name + ' · 細胞實驗室'; $('mSel').value = m;
+  buildParams(); resetModel();
+}
+$('mSel').onchange = e => { setModel(e.target.value); e.target.blur(); };
+$('bReset').onclick = () => resetModel();
+
+// ---- 隱藏介面 + 自動輪播（螢幕保護程式）----
+let clean = false, auto = false, autoSec = 30, autoT = 0, lastPX = 0, lastPY = 0;
+const AUTO = {   // 輪播時每個滑桿的隨機範圍：都挑「畫面好看」的區間
+  tol: [25, 55], empty: [8, 25], beta: [4, 20], recover: [12, 40], mobility: [20, 90], dens: [20, 40], vacc: [0, 40],
+  b: [175, 200], coop: [100, 100], pop: [300, 900], regrow: [1, 2], visMax: [4, 8],
+  grow: [3, 12], spread: [50, 95], lightning: [10, 60], treeDens: [40, 70], rate: [100, 500], rule: [0, 3], nAnts: [1, 3],
+};
+function setClean(v){ clean = v; document.body.classList.toggle('clean', v); }
+function setAuto(v){ auto = v; autoT = performance.now(); }
+function autoNext(){
+  const keys = Object.keys(MODELS), nxt = keys[(keys.indexOf(model) + 1) % keys.length];
+  for (const p of MODELS[nxt].params){ const r = AUTO[p.k]; if (r) V[p.k] = Math.round(r[0] + Math.random()*(r[1] - r[0])); }
+  if (MODELS[nxt].autoPick) MODELS[nxt].autoPick();   // 有專屬「好看參數組」的模型（如反應擴散）
+  if (nxt === 'life') density = 0.15 + Math.random()*0.13;
+  setModel(nxt);
+  if (nxt === 'life' && Math.random() < 0.4) runExperiment();   // 生命遊戲有時直接來一場碰撞
+  banner = { text: `自動輪播 → ${MODELS[nxt].name}`, until: performance.now() + 3000 };
+}
+$('bClean').onclick = () => setClean(true);
+$('cAuto').onchange = e => setAuto(e.target.checked);
+$('sAuto').oninput = e => { autoSec = +e.target.value; autoT = performance.now(); };
+// 螢幕保護程式行為：輪播 + 隱藏介面時，滑鼠一動就停下並叫回介面
+addEventListener('pointermove', e => {
+  if (auto && clean && Math.hypot(e.clientX - lastPX, e.clientY - lastPY) > 12){ setClean(false); setAuto(false); }
+  lastPX = e.clientX; lastPY = e.clientY;
+});
+
+// ---- 分享用：觸控、開場說明、網址參數 ----
+let altMode = false;
+$('cAlt').onchange = e => altMode = e.target.checked;
+const qs = new URLSearchParams(typeof location !== 'undefined' ? location.search : '');
+const intro = $('intro');
+function closeIntro(){ intro.hidden = true; try { localStorage.setItem('celllab-seen', '1'); } catch (e) {} }
+$('iAuto').onclick = () => {
+  closeIntro(); setAuto(true); setClean(true);
+  banner = { text: '自動播放中：點一下畫面或移動滑鼠即可停止', until: performance.now() + 6000 };
+};
+$('iPlay').onclick = closeIntro;
+$('bHelp').onclick = () => intro.hidden = false;
+addEventListener('pointerdown', () => { if (auto && clean){ setClean(false); setAuto(false); } });   // 手機沒有「移動滑鼠」，點一下就停
+let seen = false; try { seen = localStorage.getItem('celllab-seen') === '1'; } catch (e) {}
+if (seen || qs.get('intro') === '0' || qs.get('clean') === '1') intro.hidden = true;
+if (innerWidth < 700){ $('pb').hidden = true; $('pt').textContent = '▸'; showGuide = false; }   // 小螢幕：面板預設收合、關掉圖鑑
+
+init();
+// 網址參數：?m=rd（模型）、&clean=1（隱藏介面）、&steps=400（先快轉 N 步）、&intro=0（略過開場）
+const qm = qs.get('m');
+if (qm && MODELS[qm]) setModel(qm);
+if (qs.get('clean') === '1') setClean(true);
+for (let n = +qs.get('steps') || 0; n > 0; n--) stepModel();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
