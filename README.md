@@ -1,90 +1,94 @@
-# 🧫 細胞實驗室 Cell Lab
+# 🧫 Cell Lab
 
-八個「每個個體只看鄰居」的互動模擬。規則都只有幾行，卻會自己長出隔離、疫情、貧富差距、斑馬紋，以及混沌中的秩序。
+[繁體中文](README.zh-TW.md) ｜ **English**
 
-單一 HTML 檔、零相依、不需要建置，開啟 `index.html` 就能玩，也可以當螢幕保護程式放著看。
+Eight interactive simulations where every individual only looks at its neighbors. Each has just a few lines of rules, yet segregation, epidemics, wealth inequality, zebra stripes and order within chaos grow on their own.
 
-**▶ [線上玩：shanchiehchiu.github.io/cell-lab](https://shanchiehchiu.github.io/cell-lab/)**
+One HTML file, zero dependencies, no build step. Open `index.html` and play, or leave it running as a screensaver. The interface is available in **English and Traditional Chinese** (auto-detected, switchable in the panel).
 
-![Cell Lab 展示：反應擴散、蘭頓螞蟻、囚犯困境、森林大火、謝林隔離](docs/demo.gif)
+**▶ [Play online: shanchiehchiu.github.io/cell-lab](https://shanchiehchiu.github.io/cell-lab/)**
 
-## 八個模型
+![Cell Lab demo: reaction–diffusion, Langton's ant, prisoner's dilemma, forest fire, Schelling segregation](docs/demo.gif)
 
-| 模型 | 一句話 | 你可以調 |
+## The eight models
+
+| Model | In one sentence | What you can tune |
 |---|---|---|
-| **生命遊戲** | 兩條生死規則，長出滑翔機、閃燈、滑翔機槍；內建圖案辨識雷達和碰撞實驗 | 密度、速度、泡泡對話 |
-| **謝林隔離** | 沒有人想隔離，只要「至少 35% 鄰居跟我同色」，最後卻自己分區 | 容忍度、空地比例 |
-| **傳染病 (SIR)** | 居民走動、接觸、感染、康復，附即時感染曲線 | 感染率、康復時間、活動力（封城）、疫苗率 |
-| **囚犯困境（空間版）** | 合作者與背叛者互相模仿最高分的鄰居，中央一個背叛者炸出萬花筒 | 誘惑值 b、初始合作比例 |
-| **糖景** | 兩座糖山、天生視野與代謝不同的居民，貧富差距（基尼係數）自己長出來 | 人數、糖再生速度、視野 |
-| **反應擴散** | Gray-Scott 模型，長出珊瑚、迷宮、細胞分裂般的斑紋 | 餵食 f、殺死 k |
-| **森林大火** | 樹木生長、閃電點火、火沿樹林蔓延，火災大小呈冪律分布 | 生長、蔓延、閃電頻率 |
-| **蘭頓螞蟻** | 兩條規則的螞蟻，先混沌亂走上萬步，再突然蓋出斜向「高速公路」 | 規則（RL、RLR…）、螞蟻數 |
+| **Game of Life** | Two birth/death rules grow gliders, blinkers and glider guns; includes a pattern-recognition radar and collision experiments | Density, speed, chat bubbles |
+| **Schelling Segregation** | Nobody wants segregation, only "at least 35% of my neighbors look like me" — yet the city splits into patches | Tolerance, empty lots |
+| **Epidemic (SIR)** | Agents move, meet, get infected and recover, with a live infection curve | Infection rate, recovery time, mobility (lockdown), vaccination |
+| **Prisoner's Dilemma (spatial)** | Cooperators and defectors copy their best-scoring neighbor; one defector in the center explodes into a kaleidoscope | Temptation b, initial cooperators |
+| **Sugarscape** | Two sugar mountains and agents with random vision and metabolism; wealth inequality (Gini coefficient) emerges by itself | Agents, sugar regrowth, vision |
+| **Reaction–Diffusion** | The Gray–Scott model grows coral, mazes and dividing-cell patterns | Feed rate f, kill rate k |
+| **Forest Fire** | Trees grow, lightning strikes, fire spreads through the forest; fire sizes follow a power law | Growth, spread, lightning rate |
+| **Langton's Ant** | An ant with two rules wanders chaotically for ~10,000 steps, then suddenly builds a diagonal "highway" | Rule (RL, RLR…), number of ants |
 
 | | |
 |---|---|
-| ![森林大火](docs/forest.png) | ![蘭頓螞蟻](docs/ant.png) |
-| ![囚犯困境](docs/pd.png) | ![糖景](docs/sugar.png) |
-| ![謝林隔離](docs/schelling.png) | ![反應擴散](docs/rd.png) |
+| ![Forest Fire](docs/forest.png) | ![Langton's Ant](docs/ant.png) |
+| ![Prisoner's Dilemma](docs/pd.png) | ![Sugarscape](docs/sugar.png) |
+| ![Schelling Segregation](docs/schelling.png) | ![Reaction–Diffusion](docs/rd.png) |
 
-## 怎麼玩
+## How to play
 
-**第一次打開**會有開場說明：按「自動播放」就是螢幕保護程式模式（每 30 秒自動換模型與參數，點一下或移動滑鼠即停止）；按「自己玩」則用右上角的控制面板切換模型、調滑桿。
+On first load an intro card appears. **Autoplay** is screensaver mode: every 30 seconds it switches to another model with fresh random parameters (tap or move the mouse to stop). **Play myself** gives you the control panel at the top right for switching models and dragging sliders.
 
-| 桌機快捷鍵 | 功能 |
+| Desktop shortcut | Action |
 |---|---|
-| 空白鍵 | 暫停／繼續 |
-| `R` | 重新開始目前模型 |
-| `↑` `↓` | 調速度 |
-| `U` | 隱藏／顯示介面（`Esc` 叫回） |
-| `A` | 開關自動輪播 |
-| 左鍵／右鍵 | 依模型不同：畫細胞、放火、撒糖、滴入種子…（右鍵通常是相反動作） |
+| Space | Pause / resume |
+| `R` | Restart the current model |
+| `↑` `↓` | Change speed |
+| `U` | Hide / show the UI (`Esc` brings it back) |
+| `A` | Toggle auto-rotate |
+| Left / right click | Model-specific: draw cells, start a fire, add sugar, drop seeds… (right-click is usually the opposite action) |
 
-手機：面板在畫面底部，預設收合；需要右鍵動作時，勾選面板上的「右鍵動作」。
+On phones the panel sits at the bottom, collapsed by default. When you need a right-click action, tick **Right-click action** in the panel.
 
-### 網址參數
+### URL parameters
 
-方便分享特定畫面：
+Handy for sharing a specific view:
 
 ```
-index.html?m=rd&clean=1&steps=450&intro=0
+index.html?m=rd&clean=1&steps=450&intro=0&lang=en
 ```
 
-| 參數 | 說明 |
+| Parameter | Description |
 |---|---|
-| `m` | 模型：`life` `schelling` `sir` `pd` `sugar` `rd` `forest` `ant` |
-| `clean=1` | 隱藏介面 |
-| `steps=N` | 先快轉 N 步再顯示 |
-| `intro=0` | 略過開場說明 |
+| `m` | Model: `life` `schelling` `sir` `pd` `sugar` `rd` `forest` `ant` |
+| `clean=1` | Hide the UI |
+| `steps=N` | Fast-forward N steps before showing |
+| `intro=0` | Skip the intro card |
+| `lang` | Interface language: `en` or `zh`. Defaults to your browser language; can also be switched in the panel |
 
-## 部署到 GitHub Pages
+## Deploy to GitHub Pages
 
-1. 建立新的 GitHub 儲存庫，把這個資料夾的內容推上去（`index.html` 要在根目錄）。
-2. 儲存庫的 **Settings → Pages**，Source 選 **Deploy from a branch**，Branch 選 `main`、資料夾選 `/ (root)`。
-3. 等一兩分鐘，網址是 `https://<帳號>.github.io/<儲存庫名>/`。
-4. 把 `index.html` 裡的 `<meta property="og:image" content="og.png">` 改成完整網址（`https://<帳號>.github.io/<儲存庫名>/og.png`），貼到社群平台才會出現預覽圖。
+1. Create a GitHub repository and push this folder (`index.html` must be at the root).
+2. In **Settings → Pages**, choose **Deploy from a branch**, branch `main`, folder `/ (root)`.
+3. After a minute or two the site is live at `https://<user>.github.io/<repo>/`.
+4. In `index.html`, change `og:image` and `og:url` to your full URLs so social platforms can show a preview card.
 
-本機預覽不需要伺服器，直接用瀏覽器開 `index.html`。
+For local use no server is needed; just open `index.html` in a browser.
 
-## 技術筆記
+## Technical notes
 
-- 純 HTML + Canvas 2D + 原生 JavaScript，沒有任何框架或套件。
-- 八個模型共用同一塊格子畫布和一張預先算好的環面鄰居表；每個模型只需要定義 `reset`、`step`、顏色，以及可選的 `paint`、`draw`、`overlay`。
-- 加新模型只要在 `MODELS` 物件加一個項目，面板的滑桿、說明文字、輪播都會自動接上。
+- Plain HTML + Canvas 2D + vanilla JavaScript. No frameworks, no packages.
+- All eight models share one grid canvas and one precomputed toroidal neighbor table. A model only defines `reset`, `step`, its colors, and optionally `paint`, `draw` and `overlay`.
+- Adding a model means adding one entry to the `MODELS` object; the panel sliders, description, auto-rotation and language switch pick it up automatically.
+- Translations live in one `EN` table (Chinese strings are the keys). Sentences with variables use the `L(zh, en)` helper. Static page text is translated by walking the DOM and always translating from the remembered original, so switching back and forth never drifts.
 
-## 延伸閱讀
+## Further reading
 
-- John Conway，生命遊戲（1970）
-- Thomas Schelling，*Dynamic Models of Segregation*（1971）
-- Kermack & McKendrick，SIR 傳染病模型（1927）
-- Nowak & May，*Evolutionary games and spatial chaos*（1992）
-- Epstein & Axtell，*Growing Artificial Societies*（Sugarscape，1996）
-- Gray & Scott 反應擴散；Karl Sims 的〈Reaction-Diffusion Tutorial〉
-- Drossel & Schwabl，森林大火模型（1992）
-- Christopher Langton，蘭頓螞蟻（1986）
+- John Conway, Game of Life (1970)
+- Thomas Schelling, *Dynamic Models of Segregation* (1971)
+- Kermack & McKendrick, the SIR epidemic model (1927)
+- Nowak & May, *Evolutionary games and spatial chaos* (1992)
+- Epstein & Axtell, *Growing Artificial Societies* (Sugarscape, 1996)
+- Gray & Scott reaction–diffusion; Karl Sims, *Reaction-Diffusion Tutorial*
+- Drossel & Schwabl, the forest-fire model (1992)
+- Christopher Langton, Langton's ant (1986)
 
-這些都是教學用的簡化模型，能說明機制，不能拿來預測真實社會。
+These are simplified teaching models. They illustrate mechanisms; they cannot predict real societies.
 
-## 授權
+## License
 
 [MIT](LICENSE)

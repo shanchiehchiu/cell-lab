@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>細胞實驗室 Cell Lab</title>
-<meta name="description" content="八個「每個個體只看鄰居」的互動模擬：生命遊戲、謝林隔離、傳染病、囚犯困境、糖景、反應擴散、森林大火、蘭頓螞蟻。簡單規則，長出複雜世界。">
+<meta name="description" content="Eight interactive simulations where every cell only looks at its neighbors: Game of Life, Schelling segregation, epidemics, prisoner's dilemma, Sugarscape, reaction–diffusion, forest fire, Langton's ant. | 八個「只看鄰居」的互動模擬，簡單規則長出複雜世界。">
 <meta property="og:type" content="website">
 <meta property="og:title" content="細胞實驗室 Cell Lab">
-<meta property="og:description" content="八個互動模擬：隔離、疫情、貧富差距、斑馬紋、森林大火⋯⋯簡單規則長出複雜世界。可當螢幕保護程式。">
+<meta property="og:description" content="Eight interactive simulations: segregation, epidemics, wealth gaps, zebra stripes, forest fires… simple rules, complex worlds. Works as a screensaver. | 八個互動模擬，簡單規則長出複雜世界，可當螢幕保護程式。">
 <meta property="og:image" content="https://shanchiehchiu.github.io/cell-lab/og.png">
 <meta property="og:url" content="https://shanchiehchiu.github.io/cell-lab/">
 <meta name="twitter:card" content="summary_large_image">
@@ -16,7 +16,7 @@
 <style>
   html,body{margin:0;height:100%;background:#05070d;overflow:hidden;font-family:system-ui,sans-serif}
   canvas{display:block;cursor:crosshair}
-  #panel{position:fixed;right:12px;top:44px;width:236px;background:rgba(10,15,30,.92);border:1px solid rgba(120,160,255,.35);border-radius:10px;color:#cde;font-size:13px;user-select:none;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+  #panel{position:fixed;right:12px;top:44px;width:236px;max-height:calc(100vh - 100px);overflow-y:auto;background:rgba(10,15,30,.92);border:1px solid rgba(120,160,255,.35);border-radius:10px;color:#cde;font-size:13px;user-select:none;box-shadow:0 6px 24px rgba(0,0,0,.5)}
   #ph{padding:9px 12px;cursor:pointer;font-weight:600;color:#9bf;display:flex;justify-content:space-between}
   #pb{padding:2px 12px 12px;display:flex;flex-direction:column;gap:9px}
   #pb[hidden]{display:none}
@@ -46,6 +46,9 @@
   #intro button{flex:1;min-width:150px;padding:11px 12px;border-radius:8px;border:1px solid #2c3d6b;background:#16213d;color:#cde;font:inherit;font-size:15px;cursor:pointer}
   #intro button.main{background:#3a6bff;border-color:#3a6bff;color:#fff}
   #intro small{display:block;margin-top:12px;color:#789;font-size:12px;line-height:1.6}
+  #intro .lang{display:flex;gap:6px;justify-content:flex-end;margin-bottom:6px}
+  #intro .lang button{flex:none;min-width:0;padding:3px 12px;font-size:12px}
+  #intro .lang button.on{background:#3a6bff;border-color:#3a6bff;color:#fff}
   @media (max-width:700px){   /* 手機：面板改放底部並預設收合，隱藏鍵盤提示列 */
     #hud{display:none}
     #panel{left:8px;right:8px;top:auto;bottom:8px;width:auto;max-height:60vh;overflow-y:auto}
@@ -64,7 +67,8 @@
     <label>速度 <b id="vSpeed"></b><input type="range" id="sSpeed" min="2" max="120"></label>
     <div class="row"><label class="chk"><input type="checkbox" id="cAuto">自動輪播</label><button id="bClean">隱藏介面 (U)</button></div>
     <label>輪播間隔 <b id="vAuto"></b><input type="range" id="sAuto" min="10" max="120" value="30"></label>
-    <div class="row"><label class="chk"><input type="checkbox" id="cAlt">右鍵動作（手機用）</label><button id="bHelp">說明</button></div>
+    <div class="row"><label class="chk"><input type="checkbox" id="cAlt">右鍵動作（手機用）</label></div>
+    <div class="row"><button id="bHelp">說明</button><button id="bLang"></button></div>
     <div id="lifeCtl" class="grp">
       <div class="row"><button id="bRand">隨機</button><button id="bClear">清空</button><button id="bExp">碰撞實驗</button></div>
       <label>隨機密度 <b id="vDens"></b><input type="range" id="sDens" min="5" max="50"></label>
@@ -82,6 +86,7 @@
 </div>
 <div id="hud">拖曳：畫細胞（右鍵拖曳：擦除） ｜ 空白鍵：暫停/繼續 ｜ R：隨機 ｜ C：清空 ｜ G：選滑翔機槍 ｜ L：選滑翔機（選了會出現預覽，點擊放下） ｜ 建議先按 C 清空 ｜ X：碰撞實驗 ｜ T：對話泡泡 ｜ D：雷達框（綠=不動 黃=閃爍 紅=會飛） ｜ ↑↓：調速度 ｜ U：隱藏介面 ｜ A：自動輪播</div>
 <div id="intro"><div class="card">
+  <div class="lang"><button data-lang="zh">中文</button><button data-lang="en">English</button></div>
   <h1>🧫 細胞實驗室</h1>
   <p>八個「每個個體只看鄰居」的小世界：生命遊戲、謝林隔離、傳染病、囚犯困境、糖景、反應擴散、森林大火、蘭頓螞蟻。</p>
   <p>規則都只有幾行，卻會自己長出隔離、疫情、貧富差距、斑馬紋，以及混沌中的秩序。</p>
@@ -91,6 +96,84 @@
 <script>
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 const CELL = 8;
+
+// ---- 多語系：程式內以中文為原文；EN 是英文對照表，tr() 依目前語言翻譯，L(zh, en) 用於帶變數的句子 ----
+let lang = 'zh';
+try { lang = localStorage.getItem('celllab-lang') || ((navigator.language || 'zh').toLowerCase().startsWith('zh') ? 'zh' : 'en'); } catch (e) {}
+const EN = {
+  // 面板與開場說明
+  '⚙ 控制面板': "⚙ Controls", '模型': "Model", '單步': "Step", '速度': "Speed", '自動輪播': "Auto-rotate",
+  '隱藏介面 (U)': "Hide UI (U)", '輪播間隔': "Rotate every", '右鍵動作（手機用）': "Right-click action (touch)", '說明': "Help",
+  '隨機': "Random", '清空': "Clear", '碰撞實驗': "Collision test", '隨機密度': "Random density", '泡泡頻率': "Bubble rate",
+  '雷達框': "Radar", '泡泡': "Bubbles", '圖鑑': "Guide", '放置圖案（選了之後點畫面）': "Place a pattern (pick, then click the canvas)",
+  '滑翔機槍': "Glider gun", '滑翔機': "Glider", '重新開始': "Restart", '▶ 繼續': "▶ Resume", '⏸ 暫停': "⏸ Pause",
+  ' 代/秒': " gen/s", ' 步/秒': " steps/s", ' 個/秒': "/s", ' 秒': " s", ' 步': " steps", ' 人': " agents", ' 格': " cells", ' 隻': " ants",
+  '🧫 細胞實驗室': "🧫 Cell Lab", '細胞實驗室': "Cell Lab",
+  '八個「每個個體只看鄰居」的小世界：生命遊戲、謝林隔離、傳染病、囚犯困境、糖景、反應擴散、森林大火、蘭頓螞蟻。': "Eight tiny worlds where every individual only looks at its neighbors: Game of Life, Schelling segregation, epidemics, the prisoner's dilemma, Sugarscape, reaction–diffusion, forest fire and Langton's ant.",
+  '規則都只有幾行，卻會自己長出隔離、疫情、貧富差距、斑馬紋，以及混沌中的秩序。': "Each has just a few lines of rules, yet segregation, epidemics, wealth inequality, zebra stripes and order within chaos grow on their own.",
+  '▶ 自動播放': "▶ Autoplay", '🎮 自己玩': "🎮 Play myself",
+  '桌機快捷鍵：空白鍵暫停、U 隱藏介面、A 自動輪播。手機請用面板操作；需要「右鍵動作」（擦除、種樹…）時，勾選面板上的「右鍵動作」。': "Desktop shortcuts: Space to pause, U to hide the UI, A to auto-rotate. On phones use the panel; for right-click actions (erase, plant trees…), tick “Right-click action” in the panel.",
+  // 底部提示列
+  '拖曳：畫細胞（右鍵拖曳：擦除） ｜ 空白鍵：暫停/繼續 ｜ R：隨機 ｜ C：清空 ｜ G：選滑翔機槍 ｜ L：選滑翔機（選了會出現預覽，點擊放下） ｜ 建議先按 C 清空 ｜ X：碰撞實驗 ｜ T：對話泡泡 ｜ D：雷達框（綠=不動 黃=閃爍 紅=會飛） ｜ ↑↓：調速度 ｜ U：隱藏介面 ｜ A：自動輪播':
+    "Drag: draw cells (right-drag: erase) | Space: pause/resume | R: random | C: clear | G: pick glider gun | L: pick glider (a preview appears, click to place) | Tip: press C first | X: collision test | T: chat bubbles | D: radar (green = still, yellow = blinking, red = moving) | ↑↓: speed | U: hide UI | A: auto-rotate",
+  ' ｜ U：隱藏介面 ｜ A：自動輪播': " | U: hide UI | A: auto-rotate",
+  // 生命遊戲：圖案、圖鑑、實驗、泡泡
+  '圖鑑（H 隱藏）': "Guide (H to hide)", '完全不動': "Never moves", '橫、直來回閃': "Flips horizontal ↔ vertical", '斜著一直飛走': "Flies off diagonally",
+  '方塊': "Block", '蜂巢': "Beehive", '麵包': "Loaf", '小船': "Boat", '浴缸': "Tub", '池塘': "Pond", '閃燈': "Blinker", '蟾蜍': "Toad", '信標': "Beacon",
+  '滑翔機 × 滑翔機（正面對撞）': "Glider × glider (head-on)", '滑翔機 × 方塊': "Glider × block", '滑翔機 × 閃燈': "Glider × blinker",
+  '滑翔機 × 蜂巢': "Glider × beehive", '三隻滑翔機會師': "Three gliders converge",
+  '我不動': "I'm not moving", '穩如泰山': "Solid as a rock", '別推我': "Don't push me", '2×2 最強': "2×2 is the best",
+  '嗡嗡嗡～': "Bzzz~", '我家很甜': "Sweet home", '六邊形之光': "Hexagon power",
+  '剛出爐': "Fresh out of the oven", '有人要吐司嗎': "Anyone want toast?",
+  '出航！': "Set sail!", '我沒在動啦': "I'm not moving!",
+  '泡澡中': "Soaking", '水好燙': "The water is hot",
+  '呱': "Ribbit", '中間沒有魚': "No fish in the middle",
+  '閃閃閃': "Blink blink", '我好暈': "I'm dizzy", '眨眼中': "Winking", '開燈關燈': "Lights on, lights off",
+  '呱呱': "Ribbit ribbit", '跳一下': "Hop!",
+  '嗶——': "Beep—", '有人嗎？': "Anybody there?",
+  '借過！': "Coming through!", '別擋路': "Move over", '我要飛去哪': "Where am I flying?", '小心！': "Watch out!",
+  '要撞了！！': "We're gonna crash!!", '啊啊啊！': "Aaaah!", '煞車！！': "Brake!!",
+  '有東西衝過來！': "Something is coming!", '救命啊': "Help!", '我什麼都沒做': "I didn't do anything",
+  // 模型名稱
+  '生命遊戲': "Game of Life", '謝林隔離模型': "Schelling Segregation", '傳染病模擬 (SIR)': "Epidemic (SIR)",
+  '囚犯困境（空間版）': "Prisoner's Dilemma (spatial)", '糖景（貧富差距）': "Sugarscape (wealth gap)",
+  '反應擴散（斑紋）': "Reaction–Diffusion", '森林大火': "Forest Fire", '蘭頓螞蟻': "Langton's Ant",
+  // 模型說明
+  '紅、藍兩種居民，只要「同色鄰居比例」低於容忍度就搬家（閃白光的是剛搬家的人）。把容忍度拉到 30～40%：沒有人想隔離，卻自己分成一塊一塊。隔離指數 50% ≈ 完全混居。':
+    "Red and blue residents move away whenever the share of same-color neighbors drops below their tolerance (white flashes = just moved). Set tolerance to 30–40%: nobody wants segregation, yet the city splits into patches. A segregation index of 50% means fully mixed.",
+  '藍＝健康、紅＝感染、綠＝康復免疫。用滑鼠點畫面可以製造感染源。試試把「活動力」調低（封城）或拉高疫苗率，看左上角的感染曲線怎麼被壓平。':
+    "Blue = healthy, red = infected, green = recovered (immune). Click the canvas to start new infections. Try lowering Mobility (lockdown) or raising vaccination, and watch the infection curve in the top-left flatten.",
+  '藍＝合作、紅＝背叛，綠／黃＝剛轉換的格子。每格會模仿「自己和鄰居中得分最高的人」。「全員合作＋中央一個背叛者」時：b 低於約 1.8，背叛者無法擴散；高於 2.0，也只能小範圍存活；剛好在 1.8～2.0 之間，會炸出對稱的萬花筒圖案，最後合作者穩定在三成左右。':
+    "Blue = cooperator, red = defector, green/yellow = cells that just switched. Each cell copies the highest-scoring player among itself and its neighbors. With all cooperators plus one defector in the center: below b ≈ 1.8 the defector cannot spread, above 2.0 it survives only in small pockets, and between 1.8 and 2.0 it explodes into a symmetric kaleidoscope, settling at roughly 30% cooperators.",
+  '黃色底＝糖（越亮越多），圓點＝居民，顏色代表財富（紅＝窮、青＝富）。每個人視野和代謝率天生隨機，沒人偷、沒人作弊，貧富差距（基尼係數）卻自己長出來。左鍵撒糖、右鍵挖糖。':
+    "Yellow background = sugar (brighter = more), dots = agents, color = wealth (red = poor, cyan = rich). Vision and metabolism are random from birth; nobody steals or cheats, yet wealth inequality (the Gini coefficient) emerges on its own. Left-click to add sugar, right-click to remove it.",
+  '兩種化學物質互相反應、擴散，會長出斑馬紋、珊瑚、細胞分裂般的圖案。滑鼠點畫面滴入「種子」。經典組合：餵食 0.0545／殺死 0.0620＝珊瑚，0.0367／0.0649＝細胞分裂，0.0290／0.0570＝迷宮。調一點點，圖案就完全不同。':
+    "Two chemicals react and diffuse into zebra stripes, coral and dividing cells. Click the canvas to drop in a “seed”. Classic pairs: feed 0.0545 / kill 0.0620 = coral, 0.0367 / 0.0649 = cell division, 0.0290 / 0.0570 = maze. Tiny changes give entirely different patterns.",
+  '綠＝樹、亮橘＝火、暗紅＝灰燼。樹一直在長，閃電偶爾點火，火勢沿著相連的樹林蔓延。左鍵點畫面放火、右鍵種樹。試試把「閃電頻率」調低：樹會連成一大片，一旦著火就是災難；頻繁小火反而不會有大火。':
+    "Green = tree, bright orange = fire, dark red = ash. Trees keep growing, lightning occasionally strikes, and fire spreads through connected forest. Left-click to start a fire, right-click to plant trees. Try lowering Lightning rate: the trees join into one huge forest and a single spark becomes a catastrophe, while frequent small fires prevent big ones.",
+  '一隻螞蟻只有兩條規則：站在空格→右轉、塗色、前進；站在有色格→左轉、擦掉、前進。先亂走上萬步，然後突然開始蓋出一條斜向的「高速公路」（紅點是螞蟻）。換規則（RLR、LLRR…）或多放幾隻螞蟻，圖案完全不同。點畫面可以再放一隻。':
+    "The ant has two rules: on an empty cell turn right, paint it and step forward; on a painted cell turn left, erase it and step forward. It wanders chaotically for about 10,000 steps, then suddenly builds a diagonal “highway” (the red dot is the ant). Try other rules (RLR, LLRR…) or more ants for completely different patterns. Click the canvas to add another ant.",
+  // 各模型的提示列
+  '謝林隔離模型 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度 ｜ 用面板調容忍度，看隔離指數怎麼變': "Schelling Segregation | Space: pause | R: restart | ↑↓: speed | Tune tolerance in the panel and watch the segregation index",
+  '傳染病模擬 ｜ 滑鼠點擊：製造感染源 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度': "Epidemic | Click: start an infection | Space: pause | R: restart | ↑↓: speed",
+  '囚犯困境 ｜ 左鍵：放背叛者，右鍵：放合作者 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度': "Prisoner's Dilemma | Left-click: add defectors, right-click: add cooperators | Space: pause | R: restart | ↑↓: speed",
+  '糖景 ｜ 左鍵：撒糖 ｜ 右鍵：挖掉糖 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度': "Sugarscape | Left-click: add sugar | Right-click: remove sugar | Space: pause | R: restart | ↑↓: speed",
+  '反應擴散 ｜ 滑鼠點擊／拖曳：滴入種子 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度': "Reaction–Diffusion | Click/drag: drop seeds | Space: pause | R: restart | ↑↓: speed",
+  '森林大火 ｜ 左鍵：放火 ｜ 右鍵：種樹 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度': "Forest Fire | Left-click: start a fire | Right-click: plant trees | Space: pause | R: restart | ↑↓: speed",
+  '蘭頓螞蟻 ｜ 滑鼠點擊：再放一隻螞蟻 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度': "Langton's Ant | Click: add an ant | Space: pause | R: restart | ↑↓: speed",
+  // 滑桿標籤
+  '容忍度（至少幾成同色鄰居才滿意）': "Tolerance (min. share of same-color neighbors to be happy)", '空地比例': "Empty lots",
+  '感染率（每個感染鄰居每步）': "Infection rate (per infected neighbor per step)", '康復所需步數': "Steps to recover",
+  '活動力（越低越像封城）': "Mobility (lower = lockdown)", '居民密度': "Population density", '疫苗接種率': "Vaccination rate",
+  '背叛的誘惑值 b': "Temptation to defect, b", '初始合作者比例（100% = 正中央一個背叛者）': "Initial cooperators (100% = one defector in the center)",
+  '居民人數': "Agents", '糖再生速度（每步）': "Sugar regrowth (per step)", '視野上限（天生差異）': "Max vision (innate variation)",
+  '餵食速率 f': "Feed rate f", '殺死速率 k': "Kill rate k",
+  '樹木生長機率（每格每步）': "Tree growth chance (per cell per step)", '火的蔓延機率': "Fire spread chance", '閃電頻率': "Lightning rate", '初始樹木密度': "Initial tree density",
+  '每步走的格數': "Moves per step", '規則（R右轉、L左轉，依序對應顏色）': "Rule (R = turn right, L = turn left, per color in order)", '螞蟻數量': "Number of ants",
+  '人口比例變化': "Population share over time",
+};
+const tr = s => lang === 'en' ? (EN[s] ?? s) : s;
+const L = (zh, en) => lang === 'en' ? en : zh;
 let cols, rows, grid, next, age, gen = 0, paused = false, speed = 30;   // speed = 每秒世代數
 
 function init(){
@@ -149,11 +232,11 @@ function draw(){
     ctx.strokeStyle = 'rgba(255,220,80,.6)'; ctx.setLineDash([4, 4]);
     ctx.strokeRect(mx*CELL-3, my*CELL-3, w*CELL+6, h*CELL+6); ctx.setLineDash([]);
     ctx.fillStyle = '#fd6'; ctx.font = '14px system-ui';
-    ctx.fillText(`${b.name}（點擊放下，Esc 取消）`, mx*CELL, my*CELL - 10);
+    ctx.fillText(L(`${b.name}（點擊放下，Esc 取消）`, `${tr(b.name)} (click to place, Esc to cancel)`), mx*CELL, my*CELL - 10);
   }
   document.getElementById('gen').textContent =
-    `第 ${gen} 代 ｜ ${speed} 代/秒 ${paused ? '｜ 暫停中' : ''}` +
-    (radar ? ` ｜ 不動 ${counts.still} ・ 閃爍 ${counts.osc} ・ 會飛 ${counts.ship}` : '');
+    L(`第 ${gen} 代 ｜ ${speed} 代/秒 ${paused ? '｜ 暫停中' : ''}`, `Gen ${gen} | ${speed} gen/s ${paused ? '| paused' : ''}`) +
+    (radar ? L(` ｜ 不動 ${counts.still} ・ 閃爍 ${counts.osc} ・ 會飛 ${counts.ship}`, ` | still ${counts.still} · blinking ${counts.osc} · moving ${counts.ship}`) : '');
 }
 
 // ---- 圖案 ----
@@ -191,13 +274,13 @@ function drawGuide(){
   const S = 7, rowH = 34, pw = 200, ph = GUIDE.length*rowH + 34;
   ctx.fillStyle = 'rgba(10,15,30,.85)'; ctx.fillRect(12, 12, pw, ph);
   ctx.strokeStyle = 'rgba(120,160,255,.4)'; ctx.strokeRect(12.5, 12.5, pw, ph);
-  ctx.fillStyle = '#9bf'; ctx.font = 'bold 13px system-ui'; ctx.fillText('圖鑑（H 隱藏）', 22, 32);
+  ctx.fillStyle = '#9bf'; ctx.font = 'bold 13px system-ui'; ctx.fillText(tr('圖鑑（H 隱藏）'), 22, 32);
   GUIDE.forEach((g, i) => {
     const y = 44 + i*rowH;
     ctx.fillStyle = '#fff';
     for (const [dx, dy] of g.cells) ctx.fillRect(24 + dx*S, y + 4 + dy*S, S-1, S-1);
-    ctx.fillStyle = '#cde'; ctx.font = '13px system-ui'; ctx.fillText(g.name, 68, y + 12);
-    ctx.fillStyle = '#89a'; ctx.font = '12px system-ui'; ctx.fillText(g.tip, 68, y + 27);
+    ctx.fillStyle = '#cde'; ctx.font = '13px system-ui'; ctx.fillText(tr(g.name), 68, y + 12);
+    ctx.fillStyle = '#89a'; ctx.font = '12px system-ui'; ctx.fillText(tr(g.tip), 68, y + 27);
   });
 }
 
@@ -279,7 +362,7 @@ function drawRadar(){
       ctx.moveTo(cx + sx*L, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + sy*L);
     }
     ctx.stroke();
-    ctx.fillStyle = c; ctx.fillText(m.p.name, x, y > 14 ? y - 3 : y + h + 12);
+    ctx.fillStyle = c; ctx.fillText(tr(m.p.name), x, y > 14 ? y - 3 : y + h + 12);
   }
 }
 
@@ -302,7 +385,7 @@ function runExperiment(){
   const e = EXPERIMENTS[Math.floor(Math.random()*EXPERIMENTS.length)];
   grid.fill(0); age.fill(0); gen = 0; paused = false; brush = null; speed = 12;   // 放慢，看得清楚
   e.run(cols >> 1, rows >> 1);
-  banner = { text: `碰撞實驗：${e.name}`, until: performance.now() + 3500 };
+  banner = { text: L(`碰撞實驗：${e.name}`, `Collision test: ${tr(e.name)}`), until: performance.now() + 3500 };
 }
 function drawBanner(now){
   if (!banner || now > banner.until) return;
@@ -365,7 +448,7 @@ function drawBubbles(now){
     }
     if (!best){ b.until = 0; continue; }
     b.cx = best.x + best.w/2; b.cy = best.y + best.h/2;
-    const bw = ctx.measureText(b.text).width + 16, bh = 24;
+    const txt = tr(b.text), bw = ctx.measureText(txt).width + 16, bh = 24;   // 台詞以中文存放，畫的當下才翻譯
     const bx = Math.min(Math.max(b.cx*CELL - bw/2, 4), cv.width - bw - 4);
     let by = best.y*CELL - bh - 14, below = false;
     if (by < 4){ by = (best.y + best.h)*CELL + 14; below = true; }
@@ -373,7 +456,7 @@ function drawBubbles(now){
     ctx.globalAlpha = Math.min(1, (b.until - now)/400);
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 8); ctx.fill();
     ctx.beginPath(); ctx.moveTo(tx-5, ty); ctx.lineTo(tx+5, ty); ctx.lineTo(tx, ty + (below ? -7 : 7)); ctx.fill();   // 小尾巴
-    ctx.fillStyle = '#123'; ctx.fillText(b.text, bx + 8, by + 16);
+    ctx.fillStyle = '#123'; ctx.fillText(txt, bx + 8, by + 16);
     ctx.globalAlpha = 1;
   }
 }
@@ -470,10 +553,10 @@ const MODELS = {
       { k: 'tol', label: '容忍度（至少幾成同色鄰居才滿意）', min: 0, max: 100, val: 35, fmt: v => v + '%' },
       { k: 'empty', label: '空地比例', min: 2, max: 40, val: 12, fmt: v => v + '%', reset: true },
     ],
-    info: '',
+    seg: 0, unhappy: 0,   // 隔離指數與不滿意人數；文字在 stats() 才組合，切換語言才會立刻更新
     reset(){
       for (let i = 0; i < grid.length; i++){ grid[i] = Math.random() < V.empty/100 ? 0 : (Math.random() < .5 ? 1 : 2); age[i] = 0; }
-      gen = 0; this.info = '';
+      gen = 0; this.seg = 0; this.unhappy = 0;
     },
     step(){
       const tol = V.tol/100, unhappy = [], empties = [];
@@ -492,11 +575,11 @@ const MODELS = {
         const k = Math.random()*empties.length | 0, j = empties[k];
         grid[j] = grid[i]; grid[i] = 0; age[j] = 4; empties[k] = i;   // 搬走後，原位置變成新的空地
       }
-      this.info = `隔離指數 ${(n ? sum/n*100 : 0).toFixed(0)}% ｜ 不滿意 ${unhappy.length} 人`;
+      this.seg = n ? sum/n*100 : 0; this.unhappy = unhappy.length;
       gen++;
     },
     color: (s, a) => a > 0 ? '#fff' : (s === 1 ? '#ff5a6e' : '#4da3ff'),
-    stats(){ return this.info; },
+    stats(){ return L(`隔離指數 ${this.seg.toFixed(0)}% ｜ 不滿意 ${this.unhappy} 人`, `Segregation index ${this.seg.toFixed(0)}% | Unhappy ${this.unhappy}`); },
   },
 
   // 傳染病 SIR：健康(1) → 感染(2) → 康復(3)，居民會隨機走動
@@ -506,7 +589,7 @@ const MODELS = {
     hud: '傳染病模擬 ｜ 滑鼠點擊：製造感染源 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度',
     params: [
       { k: 'beta', label: '感染率（每個感染鄰居每步）', min: 1, max: 50, val: 8, fmt: v => v + '%' },
-      { k: 'recover', label: '康復所需步數', min: 5, max: 80, val: 20, fmt: v => v + ' 步' },
+      { k: 'recover', label: '康復所需步數', min: 5, max: 80, val: 20, fmt: v => v + tr(' 步') },
       { k: 'mobility', label: '活動力（越低越像封城）', min: 0, max: 100, val: 60, fmt: v => v + '%' },
       { k: 'dens', label: '居民密度', min: 10, max: 60, val: 30, fmt: v => v + '%', reset: true },
       { k: 'vacc', label: '疫苗接種率', min: 0, max: 95, val: 0, fmt: v => v + '%', reset: true },
@@ -553,7 +636,7 @@ const MODELS = {
       const H = history, w = 270, h = 110, x0 = 12, y0 = 12, tot = Math.max(1, this.total);
       ctx.fillStyle = 'rgba(10,15,30,.85)'; ctx.fillRect(x0, y0, w, h + 26);
       ctx.strokeStyle = 'rgba(120,160,255,.35)'; ctx.strokeRect(x0 + .5, y0 + .5, w, h + 26);
-      ctx.fillStyle = '#9bf'; ctx.font = 'bold 12px system-ui'; ctx.fillText('人口比例變化', x0 + 8, y0 + 16);
+      ctx.fillStyle = '#9bf'; ctx.font = 'bold 12px system-ui'; ctx.fillText(tr('人口比例變化'), x0 + 8, y0 + 16);
       if (H.length < 2) return;
       ctx.lineWidth = 2;
       for (const [key, col] of [['s', '#4da3ff'], ['r', '#4fe39a'], ['i', '#ff4d5e']]){
@@ -568,7 +651,9 @@ const MODELS = {
     },
     stats(){
       const c = this.cnt;
-      return `健康 ${c.s} ・ 感染 ${c.i} ・ 康復 ${c.r} ・ 峰值 ${(this.peak/Math.max(1, this.total)*100).toFixed(0)}%` + (c.i === 0 ? ' ｜ 疫情結束' : '');
+      const pk = (this.peak/Math.max(1, this.total)*100).toFixed(0);
+      return L(`健康 ${c.s} ・ 感染 ${c.i} ・ 康復 ${c.r} ・ 峰值 ${pk}%` + (c.i === 0 ? ' ｜ 疫情結束' : ''),
+               `Healthy ${c.s} · Infected ${c.i} · Recovered ${c.r} · Peak ${pk}%` + (c.i === 0 ? ' | epidemic over' : ''));
     },
   },
 
@@ -606,7 +691,7 @@ const MODELS = {
     },
     paint(x, y, btn){ block3(x, y, i => { grid[i] = btn === 2 ? 1 : 2; age[i] = 0; }); },
     color: (s, a) => a === 1 ? '#4fe39a' : a === 2 ? '#ffd84d' : s === 1 ? '#4da3ff' : '#ff4d5e',
-    stats(){ return `合作者 ${this.coopPct.toFixed(1)}%`; },
+    stats(){ return L(`合作者 ${this.coopPct.toFixed(1)}%`, `Cooperators ${this.coopPct.toFixed(1)}%`); },
   },
 
   // 糖景（Sugarscape）：居民在糖山上找糖，視野、代謝天生不同，貧富差距自己長出來
@@ -615,9 +700,9 @@ const MODELS = {
     note: '黃色底＝糖（越亮越多），圓點＝居民，顏色代表財富（紅＝窮、青＝富）。每個人視野和代謝率天生隨機，沒人偷、沒人作弊，貧富差距（基尼係數）卻自己長出來。左鍵撒糖、右鍵挖糖。',
     hud: '糖景 ｜ 左鍵：撒糖 ｜ 右鍵：挖掉糖 ｜ 空白鍵：暫停 ｜ R：重新開始 ｜ ↑↓：調速度',
     params: [
-      { k: 'pop', label: '居民人數', min: 100, max: 1500, val: 500, fmt: v => v + ' 人', reset: true },
+      { k: 'pop', label: '居民人數', min: 100, max: 1500, val: 500, fmt: v => v + tr(' 人'), reset: true },
       { k: 'regrow', label: '糖再生速度（每步）', min: 1, max: 4, val: 1, fmt: v => v },
-      { k: 'visMax', label: '視野上限（天生差異）', min: 1, max: 10, val: 6, fmt: v => v + ' 格', reset: true },
+      { k: 'visMax', label: '視野上限（天生差異）', min: 1, max: 10, val: 6, fmt: v => v + (lang === 'en' && v === 1 ? ' cell' : tr(' 格')), reset: true },
     ],
     reset(){
       const N = grid.length;
@@ -685,7 +770,7 @@ const MODELS = {
       const t = Math.min(1, this.w[i] / Math.max(1, this.avg*2.5));
       return `hsl(${t*190} 90% 58%)`;
     },
-    stats(){ return `人口 ${this.n} ｜ 貧富差距（基尼）${this.gini.toFixed(2)} ｜ 最富 ${this.richest.toFixed(0)}`; },
+    stats(){ return L(`人口 ${this.n} ｜ 貧富差距（基尼）${this.gini.toFixed(2)} ｜ 最富 ${this.richest.toFixed(0)}`, `Agents ${this.n} | Gini ${this.gini.toFixed(2)} | Richest ${this.richest.toFixed(0)}`); },
   },
 
   // 反應擴散（Gray-Scott）：兩種化學物質 U、V，V 會把 U 吃掉並複製自己，靠擴散速度差長出斑紋
@@ -747,7 +832,7 @@ const MODELS = {
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(this.oc, 0, 0, cols*CELL, rows*CELL);
     },
-    stats(){ return `f ${(V.feed/10000).toFixed(4)} ・ k ${(V.kill/10000).toFixed(4)} ｜ 斑紋覆蓋 ${this.cover.toFixed(0)}%`; },
+    stats(){ return L(`f ${(V.feed/10000).toFixed(4)} ・ k ${(V.kill/10000).toFixed(4)} ｜ 斑紋覆蓋 ${this.cover.toFixed(0)}%`, `f ${(V.feed/10000).toFixed(4)} · k ${(V.kill/10000).toFixed(4)} | Pattern coverage ${this.cover.toFixed(0)}%`); },
   },
 
   // 森林大火：樹木慢慢長、閃電隨機點火，火會沿著相鄰的樹蔓延，燒完留灰燼再變回空地
@@ -799,7 +884,7 @@ const MODELS = {
       });
     },
     color: (s, a) => s === 1 ? '#2fbf6b' : s === 2 ? (a === 0 ? '#ffd84d' : '#ff6a2a') : `hsl(15 30% ${Math.max(8, 28 - a*2)}%)`,
-    stats(){ return `森林覆蓋 ${(this.cnt.tree/grid.length*100).toFixed(0)}% ｜ 燃燒中 ${this.cnt.fire} 格 ｜ 單步最大火勢 ${this.maxFire} 格`; },
+    stats(){ const pc = (this.cnt.tree/grid.length*100).toFixed(0); return L(`森林覆蓋 ${pc}% ｜ 燃燒中 ${this.cnt.fire} 格 ｜ 單步最大火勢 ${this.maxFire} 格`, `Forest cover ${pc}% | Burning ${this.cnt.fire} cells | Peak fire ${this.maxFire} cells`); },
   },
 
   // 蘭頓螞蟻：螞蟻依「腳下格子的顏色」決定轉向，再改色、前進。規則簡單，行為卻先混沌後突然變規律
@@ -810,7 +895,7 @@ const MODELS = {
     params: [
       { k: 'rate', label: '每步走的格數', min: 1, max: 2000, val: 200, fmt: v => v },
       { k: 'rule', label: '規則（R右轉、L左轉，依序對應顏色）', min: 0, max: 3, val: 0, fmt: v => RULES[v], reset: true },
-      { k: 'nAnts', label: '螞蟻數量', min: 1, max: 8, val: 1, fmt: v => v + ' 隻', reset: true },
+      { k: 'nAnts', label: '螞蟻數量', min: 1, max: 8, val: 1, fmt: v => v + (lang === 'en' && v === 1 ? ' ant' : tr(' 隻')), reset: true },
     ],
     reset(){
       grid.fill(0); age.fill(0); this.rule = RULES[V.rule]; this.ants = []; this.moves = 0; gen = 0;
@@ -834,7 +919,7 @@ const MODELS = {
     },
     color(s){ return `hsl(${170 + (s - 1)*300/Math.max(1, this.rule.length - 1)} 85% 58%)`; },
     fg(){ ctx.fillStyle = '#ff4d5e'; for (const a of this.ants) ctx.fillRect(a.x*CELL - 1, a.y*CELL - 1, CELL + 2, CELL + 2); },
-    stats(){ return `已走 ${this.moves} 步 ｜ 規則 ${this.rule} ｜ ${this.ants.length} 隻`; },
+    stats(){ return L(`已走 ${this.moves} 步 ｜ 規則 ${this.rule} ｜ ${this.ants.length} 隻`, `${this.moves} moves | Rule ${this.rule} | ${this.ants.length} ${this.ants.length === 1 ? 'ant' : 'ants'}`); },
   },
 };
 const RULES = ['RL', 'RLR', 'LLRR', 'LRRRRRLLR'];
@@ -860,7 +945,8 @@ function drawModelView(){
   if (M.overlay && !clean) M.overlay();
   drawBanner(performance.now());
   document.getElementById('gen').textContent =
-    `${M.name} ｜ 第 ${gen} 步 ｜ ${speed} 步/秒${paused ? ' ｜ 暫停中' : ''} ｜ ${M.stats()}`;
+    L(`${M.name} ｜ 第 ${gen} 步 ｜ ${speed} 步/秒${paused ? ' ｜ 暫停中' : ''} ｜ ${M.stats()}`,
+      `${tr(M.name)} | Step ${gen} | ${speed} steps/s${paused ? ' | paused' : ''} | ${M.stats()}`);
 }
 
 // ---- 控制面板：按鈕/滑桿直接改上面的狀態變數，syncUI 再把鍵盤造成的變化同步回面板 ----
@@ -885,38 +971,69 @@ $('panel').addEventListener('change', e => e.target.blur());
 $('panel').addEventListener('click', e => { if (e.target.tagName === 'BUTTON') e.target.blur(); });
 function setVal(el, v){ if (String(el.value) !== String(v)) el.value = v; }
 function syncUI(){
-  $('bPause').textContent = paused ? '▶ 繼續' : '⏸ 暫停';
-  setVal($('sSpeed'), speed); $('vSpeed').textContent = speed + ' 代/秒';
+  $('bPause').textContent = paused ? tr('▶ 繼續') : tr('⏸ 暫停');
+  setVal($('sSpeed'), speed); $('vSpeed').textContent = speed + tr(model === 'life' ? ' 代/秒' : ' 步/秒');
   const d = Math.round(density * 100); setVal($('sDens'), d); $('vDens').textContent = d + '%';
-  const c = Math.round(1000 / speakInterval); setVal($('sChat'), c); $('vChat').textContent = c + ' 個/秒';
+  const c = Math.round(1000 / speakInterval); setVal($('sChat'), c); $('vChat').textContent = c + tr(' 個/秒');
   $('cRadar').checked = radar; $('cChat').checked = chat; $('cGuide').checked = showGuide;
   $('bGun').classList.toggle('on', brush === 'gun'); $('bGlider').classList.toggle('on', brush === 'glider');
   for (const p of MODELS[model].params) $('v_' + p.k).textContent = p.fmt(V[p.k]);
-  $('cAuto').checked = auto; $('vAuto').textContent = autoSec + ' 秒';
+  $('cAuto').checked = auto; $('vAuto').textContent = autoSec + tr(' 秒');
 }
 
 // ---- 模型選單：切換時重建該模型的滑桿、切換說明文字，並重新開始 ----
-const LIFE_HUD = $('hud').innerHTML;
-for (const [k, M] of Object.entries(MODELS)) $('mSel').add(new Option(M.name, k));
+const LIFE_HUD = $('hud').textContent;   // 載入時 DOM 內容還是中文原文，直接當翻譯對照表的 key
+const HUD_TAIL = ' ｜ U：隱藏介面 ｜ A：自動輪播';
+const hudLine = () => model === 'life' ? tr(LIFE_HUD) : tr(MODELS[model].hud) + tr(HUD_TAIL);
+function refreshSelect(){   // 切換語言時重建選單文字
+  $('mSel').innerHTML = '';
+  for (const [k, M] of Object.entries(MODELS)) $('mSel').add(new Option(tr(M.name), k));
+  $('mSel').value = model;
+}
+refreshSelect();
 function buildParams(){
   const M = MODELS[model];
   $('params').innerHTML = M.params.map(p =>
-    `<label>${p.label} <b id="v_${p.k}"></b><input type="range" id="s_${p.k}" min="${p.min}" max="${p.max}" value="${V[p.k]}"></label>`).join('');
+    `<label>${tr(p.label)} <b id="v_${p.k}"></b><input type="range" id="s_${p.k}" min="${p.min}" max="${p.max}" value="${V[p.k]}"></label>`).join('');
   for (const p of M.params){
     $('s_' + p.k).oninput = e => { V[p.k] = +e.target.value; if (p.reset) resetModel(); };
   }
-  $('mNote').textContent = M.note || '';
+  $('mNote').textContent = tr(M.note || '');
 }
 function setModel(m){
   model = m; brush = null; bubbles = []; marks = []; banner = null; paused = false;
   speed = MODELS[m].speed;
   $('lifeCtl').hidden = m !== 'life'; $('modelCtl').hidden = m === 'life';
-  $('hud').innerHTML = m === 'life' ? LIFE_HUD : MODELS[m].hud + ' ｜ U：隱藏介面 ｜ A：自動輪播';
-  document.title = MODELS[m].name + ' · 細胞實驗室'; $('mSel').value = m;
+  $('hud').textContent = hudLine();
+  document.title = tr(MODELS[m].name) + ' · ' + tr('細胞實驗室'); $('mSel').value = m;
   buildParams(); resetModel();
 }
 $('mSel').onchange = e => { setModel(e.target.value); e.target.blur(); };
 $('bReset').onclick = () => resetModel();
+
+// ---- 語言切換：靜態文字第一次看到時記下中文原文，之後永遠從原文翻譯（避免 中→英→中 卡住）----
+function applyLang(){
+  document.documentElement.lang = lang === 'en' ? 'en' : 'zh-Hant';
+  const skip = '#hud, #params, #mNote, #gen, #mSel, #bPause, #bLang, #pt, #vSpeed, #vAuto, #vDens, #vChat, [data-lang], script, style';   // 這些是程式動態寫入的
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n; (n = w.nextNode());){
+    if (n.parentElement.closest(skip)) continue;
+    if (n.__zh === undefined) n.__zh = n.nodeValue;
+    const m = n.__zh.match(/^(\s*)([\s\S]*?)(\s*)$/);   // 保留前後空白，只翻譯中間
+    if (m[2]) n.nodeValue = m[1] + tr(m[2]) + m[3];
+  }
+  document.title = tr(MODELS[model].name) + ' · ' + tr('細胞實驗室');
+  refreshSelect(); buildParams(); $('hud').textContent = hudLine();
+  $('bLang').textContent = lang === 'en' ? '中文' : 'English';
+  for (const b of document.querySelectorAll('[data-lang]')) b.classList.toggle('on', b.dataset.lang === lang);
+}
+function setLang(l){
+  lang = l;
+  try { localStorage.setItem('celllab-lang', l); } catch (e) {}
+  applyLang();
+}
+$('bLang').onclick = () => setLang(lang === 'en' ? 'zh' : 'en');
+for (const b of document.querySelectorAll('[data-lang]')) b.onclick = () => setLang(b.dataset.lang);
 
 // ---- 隱藏介面 + 自動輪播（螢幕保護程式）----
 let clean = false, auto = false, autoSec = 30, autoT = 0, lastPX = 0, lastPY = 0;
@@ -934,7 +1051,7 @@ function autoNext(){
   if (nxt === 'life') density = 0.15 + Math.random()*0.13;
   setModel(nxt);
   if (nxt === 'life' && Math.random() < 0.4) runExperiment();   // 生命遊戲有時直接來一場碰撞
-  banner = { text: `自動輪播 → ${MODELS[nxt].name}`, until: performance.now() + 3000 };
+  banner = { text: L(`自動輪播 → ${MODELS[nxt].name}`, `Auto-rotate → ${tr(MODELS[nxt].name)}`), until: performance.now() + 3000 };
 }
 $('bClean').onclick = () => setClean(true);
 $('cAuto').onchange = e => setAuto(e.target.checked);
@@ -953,7 +1070,7 @@ const intro = $('intro');
 function closeIntro(){ intro.hidden = true; try { localStorage.setItem('celllab-seen', '1'); } catch (e) {} }
 $('iAuto').onclick = () => {
   closeIntro(); setAuto(true); setClean(true);
-  banner = { text: '自動播放中：點一下畫面或移動滑鼠即可停止', until: performance.now() + 6000 };
+  banner = { text: L('自動播放中：點一下畫面或移動滑鼠即可停止', 'Autoplaying: tap or move the mouse to stop'), until: performance.now() + 6000 };
 };
 $('iPlay').onclick = closeIntro;
 $('bHelp').onclick = () => intro.hidden = false;
@@ -962,8 +1079,10 @@ let seen = false; try { seen = localStorage.getItem('celllab-seen') === '1'; } c
 if (seen || qs.get('intro') === '0' || qs.get('clean') === '1') intro.hidden = true;
 if (innerWidth < 700){ $('pb').hidden = true; $('pt').textContent = '▸'; showGuide = false; }   // 小螢幕：面板預設收合、關掉圖鑑
 
+if (qs.get('lang') === 'en' || qs.get('lang') === 'zh') lang = qs.get('lang');   // ?lang=en 可強制語言
+applyLang();
 init();
-// 網址參數：?m=rd（模型）、&clean=1（隱藏介面）、&steps=400（先快轉 N 步）、&intro=0（略過開場）
+// 網址參數：?m=rd（模型）、&clean=1（隱藏介面）、&steps=400（先快轉 N 步）、&intro=0（略過開場）、&lang=en（語言）
 const qm = qs.get('m');
 if (qm && MODELS[qm]) setModel(qm);
 if (qs.get('clean') === '1') setClean(true);
